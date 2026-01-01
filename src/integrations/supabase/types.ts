@@ -405,6 +405,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_test_items_to_user: {
+        Args: {
+          target_user_id: string
+          user_city: string
+          user_district: string
+          user_province: string
+          username: string
+        }
+        Returns: undefined
+      }
       calculate_distance: {
         Args: { lat1: number; lat2: number; lon1: number; lon2: number }
         Returns: number
