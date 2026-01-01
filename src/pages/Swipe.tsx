@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Sparkles, User, Plus, Heart, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { MobileLayout } from '@/components/MobileLayout';
 
 export default function Swipe() {
   const { user, signOut } = useAuth();
@@ -190,7 +191,7 @@ export default function Swipe() {
   const currentItem = items[currentIndex];
 
   return (
-    <div className="min-h-screen bg-muted">
+    <MobileLayout>
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -313,6 +314,6 @@ export default function Swipe() {
           </div>
         ) : null}
       </main>
-    </div>
+    </MobileLayout>
   );
 }
