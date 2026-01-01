@@ -151,7 +151,17 @@ const Index = () => {
         <div className="min-h-screen bg-background">
           <header className="border-b bg-card">
             <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-              <h1 className="text-2xl font-bold text-primary">BARTR</h1>
+              <button 
+                onClick={() => navigate('/')}
+                className="text-2xl font-bold text-primary hover:opacity-80 transition-opacity"
+              >
+                BARTR
+              </button>
+              {!user && (
+                <Button onClick={() => navigate('/auth')}>
+                  Login
+                </Button>
+              )}
             </div>
           </header>
           <main className="container mx-auto px-4 py-8">
@@ -178,21 +188,42 @@ const Index = () => {
         {/* Header - simplified for mobile */}
         <header className="border-b bg-card sticky top-0 z-10 shadow-sm">
           <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-            <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            <button 
+              onClick={() => navigate('/')}
+              className="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
+            >
               BARTR
-            </h1>
-            <div className="hidden md:flex gap-2">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/chat')}>
-                <MessageCircle className="h-5 w-5" />
-              </Button>
-              <Button variant="outline" onClick={() => navigate('/swipe')}>
-                <Heart className="mr-2 h-4 w-4" />
-                Mode Swipe
-              </Button>
-              <Button onClick={() => navigate('/upload')}>
-                <Tag className="mr-2 h-4 w-4" />
-                Pasang Barang
-              </Button>
+            </button>
+            <div className="flex items-center gap-2">
+              {user ? (
+                <>
+                  <div className="hidden md:flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/chat')}>
+                      <MessageCircle className="h-5 w-5" />
+                    </Button>
+                    <Button variant="outline" onClick={() => navigate('/swipe')}>
+                      <Heart className="mr-2 h-4 w-4" />
+                      Mode Swipe
+                    </Button>
+                    <Button onClick={() => navigate('/upload')}>
+                      <Tag className="mr-2 h-4 w-4" />
+                      Pasang Barang
+                    </Button>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => navigate('/profile')}
+                    className="md:hidden"
+                  >
+                    <User className="h-5 w-5" />
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => navigate('/auth')}>
+                  Login
+                </Button>
+              )}
             </div>
           </div>
         </header>
