@@ -6,22 +6,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-interface ItemSelectionDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onItemSelected: (itemId: string, itemName: string, itemValue: number) => void;
-  targetItem: {
-    name: string;
-    estimated_value: number;
-  };
-}
-
 interface UserItem {
   id: string;
   name: string;
   estimated_value: number;
   photos: string[];
   category: string;
+  condition?: string;
+  location?: string;
+  city?: string | null;
+  district?: string | null;
+}
+
+interface ItemSelectionDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onItemSelected: (itemId: string, itemName: string, itemValue: number, item: UserItem) => void;
+  targetItem: {
+    name: string;
+    estimated_value: number;
+  };
 }
 
 export const ItemSelectionDialog = ({ isOpen, onClose, onItemSelected, targetItem }: ItemSelectionDialogProps) => {
@@ -37,7 +41,7 @@ export const ItemSelectionDialog = ({ isOpen, onClose, onItemSelected, targetIte
       try {
         const { data, error } = await supabase
           .from('items')
-          .select('id, name, estimated_value, photos, category')
+          .select('id, name, estimated_value, photos, category, condition, location, city, district')
           .eq('user_id', user.id)
           .eq('is_active', true);
 
@@ -96,7 +100,7 @@ export const ItemSelectionDialog = ({ isOpen, onClose, onItemSelected, targetIte
                 <div
                   key={item.id}
                   className="flex gap-4 p-4 border rounded-lg hover:border-primary transition-colors cursor-pointer"
-                  onClick={() => onItemSelected(item.id, item.name, item.estimated_value)}
+                  onClick={() => onItemSelected(item.id, item.name, item.estimated_value, item)}
                 >
                   <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                     {item.photos[0] ? (
