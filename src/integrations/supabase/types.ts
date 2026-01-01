@@ -63,10 +63,12 @@ export type Database = {
         Row: {
           barter_preference: string
           category: Database["public"]["Enums"]["item_category"]
+          city: string | null
           condition: Database["public"]["Enums"]["item_condition"]
           created_at: string | null
           description: string
           detailed_minus: string
+          district: string | null
           estimated_value: number
           id: string
           is_active: boolean | null
@@ -76,6 +78,7 @@ export type Database = {
           longitude: number | null
           name: string
           photos: string[]
+          province: string | null
           top_up_value: number | null
           updated_at: string | null
           user_id: string
@@ -83,10 +86,12 @@ export type Database = {
         Insert: {
           barter_preference: string
           category: Database["public"]["Enums"]["item_category"]
+          city?: string | null
           condition: Database["public"]["Enums"]["item_condition"]
           created_at?: string | null
           description: string
           detailed_minus: string
+          district?: string | null
           estimated_value: number
           id?: string
           is_active?: boolean | null
@@ -96,6 +101,7 @@ export type Database = {
           longitude?: number | null
           name: string
           photos?: string[]
+          province?: string | null
           top_up_value?: number | null
           updated_at?: string | null
           user_id: string
@@ -103,10 +109,12 @@ export type Database = {
         Update: {
           barter_preference?: string
           category?: Database["public"]["Enums"]["item_category"]
+          city?: string | null
           condition?: Database["public"]["Enums"]["item_condition"]
           created_at?: string | null
           description?: string
           detailed_minus?: string
+          district?: string | null
           estimated_value?: number
           id?: string
           is_active?: boolean | null
@@ -116,6 +124,7 @@ export type Database = {
           longitude?: number | null
           name?: string
           photos?: string[]
+          province?: string | null
           top_up_value?: number | null
           updated_at?: string | null
           user_id?: string
@@ -192,6 +201,8 @@ export type Database = {
           conversation_id: string
           created_at: string
           id: string
+          item_id: string | null
+          message_type: string | null
           read: boolean | null
           sender_id: string
         }
@@ -200,6 +211,8 @@ export type Database = {
           conversation_id: string
           created_at?: string
           id?: string
+          item_id?: string | null
+          message_type?: string | null
           read?: boolean | null
           sender_id: string
         }
@@ -208,6 +221,8 @@ export type Database = {
           conversation_id?: string
           created_at?: string
           id?: string
+          item_id?: string | null
+          message_type?: string | null
           read?: boolean | null
           sender_id?: string
         }
@@ -219,44 +234,60 @@ export type Database = {
             referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "messages_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
         Row: {
           bio: string | null
+          city: string | null
           created_at: string | null
+          district: string | null
           full_name: string | null
           id: string
           latitude: number | null
           location: string
           longitude: number | null
           profile_photo_url: string | null
+          province: string | null
           updated_at: string | null
           username: string
           verified: boolean | null
         }
         Insert: {
           bio?: string | null
+          city?: string | null
           created_at?: string | null
+          district?: string | null
           full_name?: string | null
           id: string
           latitude?: number | null
           location: string
           longitude?: number | null
           profile_photo_url?: string | null
+          province?: string | null
           updated_at?: string | null
           username: string
           verified?: boolean | null
         }
         Update: {
           bio?: string | null
+          city?: string | null
           created_at?: string | null
+          district?: string | null
           full_name?: string | null
           id?: string
           latitude?: number | null
           location?: string
           longitude?: number | null
           profile_photo_url?: string | null
+          province?: string | null
           updated_at?: string | null
           username?: string
           verified?: boolean | null
