@@ -85,25 +85,27 @@ export const ItemDetailModal = ({ item, isOpen, onClose }: ItemDetailModalProps)
     setShowItemSelection(true);
   };
 
-  const handleItemSelected = async (selectedItemId: string, selectedItemName: string, selectedItemValue: number) => {
+  const handleItemSelected = async (selectedItemId: string, selectedItemName: string, selectedItemValue: number, selectedItem: any) => {
     setContacting(true);
     try {
       // Check if conversation already exists
       const { data: existingConvo } = await supabase
         .from('conversations')
         .select('id')
-        .or(`and(user1_id.eq.${user.id},user2_id.eq.${item.user_id}),and(user1_id.eq.${item.user_id},user2_id.eq.${user.id})`)
+        .or(`and(user1_id.eq.${user!.id},user2_id.eq.${item.user_id}),and(user1_id.eq.${item.user_id},user2_id.eq.${user!.id})`)
         .maybeSingle();
 
       let conversationId = existingConvo?.id;
 
       if (!existingConvo) {
-        // Create new conversation
+        // Create new conversation with item references
         const { data: newConvo, error } = await supabase
           .from('conversations')
           .insert({
-            user1_id: user.id < item.user_id ? user.id : item.user_id,
-            user2_id: user.id < item.user_id ? item.user_id : user.id,
+            user1_id: user!.id < item.user_id ? user!.id : item.user_id,
+            user2_id: user!.id < item.user_id ? item.user_id : user!.id,
+            item1_id: user!.id < item.user_id ? selectedItemId : item.id,
+            item2_id: user!.id < item.user_id ? item.id : selectedItemId,
           })
           .select()
           .single();
@@ -126,15 +128,24 @@ Apakah barang ini masih tersedia? Saya mau tukar dengan *${selectedItemName}* sa
 
 Bisa COD kan? Gimana menurutmu?`;
 
+      // Send initial message with barter proposal
       await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
-          sender_id: user.id,
+          sender_id: user!.id,
           content: initialMessage,
+          message_type: 'barter_proposal',
+          item_id: selectedItemId,
         });
 
-      navigate(`/chat/${conversationId}`);
+      // Navigate with item data
+      navigate(`/chat/${conversationId}`, {
+        state: {
+          targetItem: item,
+          myItem: selectedItem,
+        }
+      });
       onClose();
       setShowItemSelection(false);
     } catch (error) {
