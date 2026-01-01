@@ -1,0 +1,161 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
+import { Sparkles, ArrowRight } from 'lucide-react';
+
+export default function Auth() {
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [location, setLocation] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { signIn, signUp, user } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect if already logged in
+  if (user) {
+    navigate('/swipe');
+    return null;
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (isSignUp) {
+        if (!username || !location) {
+          toast.error('Username dan lokasi harus diisi');
+          setLoading(false);
+          return;
+        }
+        const { error } = await signUp(email, password, { username, location, full_name: fullName });
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success('Akun berhasil dibuat! Selamat datang di BARTR! 🎉');
+          navigate('/swipe');
+        }
+      } else {
+        const { error } = await signIn(email, password);
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success('Selamat datang kembali! 🎉');
+          navigate('/swipe');
+        }
+      }
+    } catch (error) {
+      toast.error('Terjadi kesalahan');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-rainbow flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-2xl border-0 animate-bounce-in">
+        <CardHeader className="text-center space-y-2">
+          <div className="mx-auto w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center animate-glow">
+            <Sparkles className="h-8 w-8 text-white" />
+          </div>
+          <CardTitle className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            BARTR
+          </CardTitle>
+          <CardDescription className="text-base">
+            {isSignUp ? 'Bergabung dengan revolusi barter' : 'Selamat datang kembali di BARTR'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {isSignUp && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    placeholder="pengguna123"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required={isSignUp}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Nama Lengkap (opsional)</Label>
+                  <Input
+                    id="fullName"
+                    placeholder="John Doe"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Lokasi</Label>
+                  <Input
+                    id="location"
+                    placeholder="Jakarta, Indonesia"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    required={isSignUp}
+                  />
+                </div>
+              </>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button
+              type="submit"
+              className="w-full bg-gradient-primary hover:opacity-90 text-white font-semibold h-12 shadow-lg"
+              disabled={loading}
+            >
+              {loading ? (
+                <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+              ) : (
+                <>
+                  {isSignUp ? 'Buat Akun' : 'Masuk'}
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </>
+              )}
+            </Button>
+          </form>
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {isSignUp ? 'Sudah punya akun? Masuk' : 'Belum punya akun? Daftar'}
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
