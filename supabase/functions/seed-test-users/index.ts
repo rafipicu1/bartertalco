@@ -172,51 +172,69 @@ Deno.serve(async (req) => {
     for (const user of TEST_USERS) {
       console.log(`Creating user: ${user.email}`)
       
-      // Create user with admin API
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: user.email,
-        password: user.password,
-        email_confirm: true,
-        user_metadata: {
-          username: user.username,
-          full_name: user.fullName,
-          location: `${user.city} — ${user.district}`,
-          province: user.province,
-          city: user.city,
-          district: user.district
+      // Check if user already exists
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
+      const existingUser = existingUsers?.users?.find(u => u.email === user.email)
+      
+      let userId: string
+
+      if (existingUser) {
+        console.log(`User ${user.email} already exists, using existing ID`)
+        userId = existingUser.id
+      } else {
+        // Create user with admin API
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+          email: user.email,
+          password: user.password,
+          email_confirm: true,
+          user_metadata: {
+            username: user.username,
+            full_name: user.fullName,
+            location: `${user.city} — ${user.district}`,
+            province: user.province,
+            city: user.city,
+            district: user.district
+          }
+        })
+
+        if (authError) {
+          console.error(`Error creating user ${user.email}:`, authError)
+          results.push({ email: user.email, status: 'error', error: authError.message })
+          continue
         }
-      })
 
-      if (authError) {
-        console.error(`Error creating user ${user.email}:`, authError)
-        results.push({ email: user.email, status: 'error', error: authError.message })
-        continue
+        if (!authData.user) {
+          results.push({ email: user.email, status: 'error', error: 'No user data returned' })
+          continue
+        }
+
+        userId = authData.user.id
+        console.log(`User created with ID: ${userId}`)
       }
 
-      if (!authData.user) {
-        results.push({ email: user.email, status: 'error', error: 'No user data returned' })
-        continue
-      }
 
-      const userId = authData.user.id
-      console.log(`User created with ID: ${userId}`)
-
-      // Update profile with location
+      // Create profile manually (trigger may not work with admin API)
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
-        .update({
+        .upsert({
+          id: userId,
+          username: user.username,
+          full_name: user.fullName,
           city: user.city,
           district: user.district,
           province: user.province,
           location: `${user.city} — ${user.district}`
         })
-        .eq('id', userId)
 
       if (profileError) {
-        console.error(`Error updating profile for ${user.email}:`, profileError)
+        console.error(`Error creating profile for ${user.email}:`, profileError)
+        results.push({ email: user.email, status: 'error', error: profileError.message })
+        continue
       }
 
-      // Delete existing dummy items (created by trigger)
+      console.log(`Profile created for ${user.email}`)
+
+      // Delete existing dummy items (if any)
       await supabaseAdmin
         .from('items')
         .delete()
