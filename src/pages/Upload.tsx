@@ -8,9 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { LocationSelector } from '@/components/LocationSelector';
 import { toast } from 'sonner';
-import { ArrowLeft, Upload as UploadIcon, X, MapPin } from 'lucide-react';
-import { getCurrentLocation } from '@/lib/geolocation';
+import { ArrowLeft, Upload as UploadIcon, X } from 'lucide-react';
 
 const CATEGORIES = [
   { value: 'elektronik', label: 'Elektronik' },
@@ -51,26 +51,40 @@ export default function Upload() {
     barter_preference: '',
     top_up_value: '',
     condition: '',
-    location: '',
-    latitude: null as number | null,
-    longitude: null as number | null,
+    province: '',
+    city: '',
+    district: '',
   });
 
+  // Load user's saved location as default
   useEffect(() => {
-    // Get current location on component mount
-    getCurrentLocation()
-      .then((coords) => {
-        setFormData((prev) => ({
+    if (user) {
+      loadUserLocation();
+    }
+  }, [user]);
+
+  const loadUserLocation = async () => {
+    if (!user) return;
+    
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('province, city, district')
+        .eq('id', user.id)
+        .single();
+
+      if (data) {
+        setFormData(prev => ({
           ...prev,
-          latitude: coords.latitude,
-          longitude: coords.longitude,
+          province: data.province || '',
+          city: data.city || '',
+          district: data.district || '',
         }));
-        toast.success('Lokasi Anda terdeteksi! 📍');
-      })
-      .catch(() => {
-        toast.error('Tidak dapat mendeteksi lokasi Anda');
-      });
-  }, []);
+      }
+    } catch (error) {
+      console.error('Error loading user location:', error);
+    }
+  };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -117,11 +131,18 @@ export default function Upload() {
       return;
     }
 
+    if (!formData.province || !formData.city || !formData.district) {
+      toast.error('Lokasi lengkap harus diisi');
+      return;
+    }
+
     setLoading(true);
 
     try {
       // Upload photos
       const photoUrls = await uploadPhotos();
+      
+      const location = `${formData.city} — ${formData.district}`;
 
       // Create item
       const { error } = await supabase.from('items').insert({
@@ -135,9 +156,10 @@ export default function Upload() {
         barter_preference: formData.barter_preference,
         top_up_value: formData.top_up_value ? parseFloat(formData.top_up_value) : 0,
         condition: formData.condition as any,
-        location: formData.location,
-        latitude: formData.latitude,
-        longitude: formData.longitude,
+        location: location,
+        province: formData.province,
+        city: formData.city,
+        district: formData.district,
       });
 
       if (error) throw error;
@@ -256,7 +278,7 @@ export default function Upload() {
                     <SelectTrigger>
                       <SelectValue placeholder="Pilih kategori" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background border shadow-lg z-50">
                       {CATEGORIES.map((cat) => (
                         <SelectItem key={cat.value} value={cat.value}>
                           {cat.label}
@@ -272,7 +294,7 @@ export default function Upload() {
                     <SelectTrigger>
                       <SelectValue placeholder="Pilih kondisi" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background border shadow-lg z-50">
                       {CONDITIONS.map((cond) => (
                         <SelectItem key={cond.value} value={cond.value}>
                           {cond.label}
@@ -319,24 +341,17 @@ export default function Upload() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="location">Lokasi</Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="location"
-                    className="pl-10"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="Jakarta, Indonesia"
-                    required
-                  />
-                </div>
-                {formData.latitude && formData.longitude && (
-                  <p className="text-xs text-muted-foreground">
-                    📍 Koordinat terdeteksi: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
-                  </p>
-                )}
+              {/* Location Selector */}
+              <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+                <LocationSelector
+                  province={formData.province}
+                  city={formData.city}
+                  district={formData.district}
+                  onProvinceChange={(value) => setFormData({ ...formData, province: value })}
+                  onCityChange={(value) => setFormData({ ...formData, city: value })}
+                  onDistrictChange={(value) => setFormData({ ...formData, district: value })}
+                  required
+                />
               </div>
 
               <Button

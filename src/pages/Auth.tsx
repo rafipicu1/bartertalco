@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { LocationSelector } from '@/components/LocationSelector';
 import { toast } from 'sonner';
 import { Sparkles, ArrowRight } from 'lucide-react';
 
@@ -14,7 +15,9 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
-  const [location, setLocation] = useState('');
+  const [province, setProvince] = useState('');
+  const [city, setCity] = useState('');
+  const [district, setDistrict] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
@@ -31,12 +34,22 @@ export default function Auth() {
 
     try {
       if (isSignUp) {
-        if (!username || !location) {
-          toast.error('Username dan lokasi harus diisi');
+        if (!username || !province || !city || !district) {
+          toast.error('Username dan lokasi lengkap harus diisi');
           setLoading(false);
           return;
         }
-        const { error } = await signUp(email, password, { username, location, full_name: fullName });
+        
+        const location = `${city} — ${district}`;
+        const { error } = await signUp(email, password, { 
+          username, 
+          location,
+          full_name: fullName,
+          province,
+          city,
+          district,
+        });
+        
         if (error) {
           toast.error(error.message);
         } else {
@@ -96,14 +109,17 @@ export default function Auth() {
                     onChange={(e) => setFullName(e.target.value)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Lokasi</Label>
-                  <Input
-                    id="location"
-                    placeholder="Jakarta, Indonesia"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    required={isSignUp}
+                
+                {/* Location Selector */}
+                <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
+                  <LocationSelector
+                    province={province}
+                    city={city}
+                    district={district}
+                    onProvinceChange={setProvince}
+                    onCityChange={setCity}
+                    onDistrictChange={setDistrict}
+                    required
                   />
                 </div>
               </>

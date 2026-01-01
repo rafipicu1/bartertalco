@@ -10,6 +10,9 @@ import { ArrowLeft, Send, User } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
 import { toast } from "sonner";
+import { BarterProposalCard } from "@/components/chat/BarterProposalCard";
+import { ItemProposalSelector } from "@/components/chat/ItemProposalSelector";
+import { ItemDetailModal } from "@/components/ItemDetailModal";
 
 interface Message {
   id: string;
@@ -17,6 +20,18 @@ interface Message {
   sender_id: string;
   created_at: string;
   read: boolean;
+  message_type: string;
+  item_id: string | null;
+  item?: {
+    id: string;
+    name: string;
+    photos: string[];
+    condition: string;
+    city: string | null;
+    district: string | null;
+    location: string;
+    estimated_value: number;
+  };
 }
 
 interface ConversationData {
@@ -38,6 +53,7 @@ export default function ChatDetail() {
   const [conversation, setConversation] = useState<ConversationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [selectedItemForDetail, setSelectedItemForDetail] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -64,8 +80,18 @@ export default function ChatDetail() {
           table: 'messages',
           filter: `conversation_id=eq.${conversationId}`
         },
-        (payload) => {
-          setMessages(prev => [...prev, payload.new as Message]);
+        async (payload) => {
+          // Fetch item data if it's a barter proposal
+          let messageWithItem = payload.new as Message;
+          if (messageWithItem.item_id) {
+            const { data: item } = await supabase
+              .from('items')
+              .select('id, name, photos, condition, city, district, location, estimated_value')
+              .eq('id', messageWithItem.item_id)
+              .single();
+            messageWithItem.item = item || undefined;
+          }
+          setMessages(prev => [...prev, messageWithItem]);
           scrollToBottom();
           
           // Mark as read if from other user
@@ -126,7 +152,23 @@ export default function ChatDetail() {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setMessages(data || []);
+      
+      // Fetch item data for barter proposals
+      const messagesWithItems = await Promise.all(
+        (data || []).map(async (msg) => {
+          if (msg.item_id) {
+            const { data: item } = await supabase
+              .from('items')
+              .select('id, name, photos, condition, city, district, location, estimated_value')
+              .eq('id', msg.item_id)
+              .single();
+            return { ...msg, item };
+          }
+          return msg;
+        })
+      );
+      
+      setMessages(messagesWithItems);
 
       // Mark unread messages as read
       const unreadMessages = (data || []).filter(
@@ -169,6 +211,7 @@ export default function ChatDetail() {
           conversation_id: conversationId,
           sender_id: user.id,
           content: newMessage.trim(),
+          message_type: 'text',
         });
 
       if (error) throw error;
@@ -178,6 +221,55 @@ export default function ChatDetail() {
       toast.error('Gagal mengirim pesan');
     } finally {
       setSending(false);
+    }
+  };
+
+  const sendBarterProposal = async (item: any) => {
+    if (!user || !conversationId || sending) return;
+
+    setSending(true);
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: user.id,
+          content: `Hai! Aku mau tukar barangmu dengan barangku ini 👇`,
+          message_type: 'barter_proposal',
+          item_id: item.id,
+        });
+
+      if (error) throw error;
+      toast.success('Penawaran barter terkirim! 🎉');
+    } catch (error) {
+      console.error('Error sending barter proposal:', error);
+      toast.error('Gagal mengirim penawaran');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleViewItemDetail = async (itemId: string) => {
+    try {
+      const { data } = await supabase
+        .from('items')
+        .select(`
+          *,
+          profiles (
+            username,
+            profile_photo_url,
+            latitude,
+            longitude
+          )
+        `)
+        .eq('id', itemId)
+        .single();
+      
+      if (data) {
+        setSelectedItemForDetail(data);
+      }
+    } catch (error) {
+      console.error('Error fetching item:', error);
     }
   };
 
@@ -219,30 +311,61 @@ export default function ChatDetail() {
         <div className="container mx-auto max-w-4xl space-y-4">
           {messages.map((message) => {
             const isOwn = message.sender_id === user?.id;
+            const isBarterProposal = message.message_type === 'barter_proposal';
+            
             return (
               <div
                 key={message.id}
                 className={`flex ${isOwn ? 'justify-end' : 'justify-start'} animate-fade-in`}
               >
-                <Card
-                  className={`max-w-[70%] ${
-                    isOwn
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-card'
-                  }`}
-                >
-                  <div className="p-3">
-                    <p className="text-sm break-words">{message.content}</p>
-                    <p className={`text-xs mt-1 ${
-                      isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                    }`}>
-                      {formatDistanceToNow(new Date(message.created_at), {
-                        addSuffix: true,
-                        locale: id,
-                      })}
-                    </p>
+                {isBarterProposal && message.item ? (
+                  <div className={`max-w-[85%] sm:max-w-[70%] space-y-2`}>
+                    <Card
+                      className={`${
+                        isOwn
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-card'
+                      }`}
+                    >
+                      <div className="p-3">
+                        <p className="text-sm break-words">{message.content}</p>
+                        <p className={`text-xs mt-1 ${
+                          isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                        }`}>
+                          {formatDistanceToNow(new Date(message.created_at), {
+                            addSuffix: true,
+                            locale: id,
+                          })}
+                        </p>
+                      </div>
+                    </Card>
+                    <BarterProposalCard
+                      item={message.item}
+                      isOwn={isOwn}
+                      onViewDetail={handleViewItemDetail}
+                    />
                   </div>
-                </Card>
+                ) : (
+                  <Card
+                    className={`max-w-[70%] ${
+                      isOwn
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-card'
+                    }`}
+                  >
+                    <div className="p-3">
+                      <p className="text-sm break-words">{message.content}</p>
+                      <p className={`text-xs mt-1 ${
+                        isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                      }`}>
+                        {formatDistanceToNow(new Date(message.created_at), {
+                          addSuffix: true,
+                          locale: id,
+                        })}
+                      </p>
+                    </div>
+                  </Card>
+                )}
               </div>
             );
           })}
@@ -252,6 +375,7 @@ export default function ChatDetail() {
 
       <footer className="border-t bg-card p-4">
         <form onSubmit={sendMessage} className="container mx-auto max-w-4xl flex gap-2">
+          <ItemProposalSelector onSelectItem={sendBarterProposal} />
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
@@ -264,6 +388,14 @@ export default function ChatDetail() {
           </Button>
         </form>
       </footer>
+
+      {selectedItemForDetail && (
+        <ItemDetailModal
+          item={selectedItemForDetail}
+          isOpen={!!selectedItemForDetail}
+          onClose={() => setSelectedItemForDetail(null)}
+        />
+      )}
     </div>
   );
 }
