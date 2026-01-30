@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { LocationSelector } from '@/components/LocationSelector';
 import { toast } from 'sonner';
 import { Sparkles, ArrowRight } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -22,11 +23,28 @@ export default function Auth() {
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if already logged in
-  if (user) {
-    navigate('/swipe');
-    return null;
-  }
+  // Check if user is admin and redirect appropriately
+  useEffect(() => {
+    const checkAdminAndRedirect = async () => {
+      if (user) {
+        // Check if user is admin
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+
+        if (roleData) {
+          navigate('/admin');
+        } else {
+          navigate('/swipe');
+        }
+      }
+    };
+    
+    checkAdminAndRedirect();
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +72,7 @@ export default function Auth() {
           toast.error(error.message);
         } else {
           toast.success('Akun berhasil dibuat! Selamat datang di BARTR! 🎉');
-          navigate('/swipe');
+          // Redirect will be handled by useEffect
         }
       } else {
         const { error } = await signIn(email, password);
@@ -62,7 +80,7 @@ export default function Auth() {
           toast.error(error.message);
         } else {
           toast.success('Selamat datang kembali! 🎉');
-          navigate('/swipe');
+          // Redirect will be handled by useEffect after user state updates
         }
       }
     } catch (error) {

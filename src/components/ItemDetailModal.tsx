@@ -11,6 +11,7 @@ import { calculateDistance, formatDistance } from "@/lib/geolocation";
 import { toast } from "sonner";
 import { ItemSelectionDialog } from "@/components/ItemSelectionDialog";
 import { ReportDialog } from "@/components/ReportDialog";
+import { BarterTypeDialog } from "@/components/BarterTypeDialog";
 
 interface ItemDetailModalProps {
   item: {
@@ -52,6 +53,8 @@ export const ItemDetailModal = ({ item, isOpen, onClose }: ItemDetailModalProps)
   const [contacting, setContacting] = useState(false);
   const [showItemSelection, setShowItemSelection] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [showBarterTypeDialog, setShowBarterTypeDialog] = useState(false);
+  const [selectedUserItem, setSelectedUserItem] = useState<any>(null);
 
   useEffect(() => {
     const getDistance = async () => {
@@ -88,7 +91,24 @@ export const ItemDetailModal = ({ item, isOpen, onClose }: ItemDetailModalProps)
   };
 
   const handleItemSelected = async (selectedItemId: string, selectedItemName: string, selectedItemValue: number, selectedItem: any) => {
+    // Store the selected item and show barter type dialog
+    setSelectedUserItem({
+      id: selectedItemId,
+      name: selectedItemName,
+      estimated_value: selectedItemValue,
+      photos: selectedItem.photos,
+      ...selectedItem
+    });
+    setShowItemSelection(false);
+    setShowBarterTypeDialog(true);
+  };
+
+  const handleBarterTypeConfirm = async (type: 'barter' | 'tuker_tambah', topUpAmount: number, topUpDirection: 'pay' | 'receive') => {
+    if (!selectedUserItem) return;
+    
     setContacting(true);
+    setShowBarterTypeDialog(false);
+    
     try {
       // Check if conversation already exists
       const { data: existingConvo } = await supabase
@@ -106,8 +126,8 @@ export const ItemDetailModal = ({ item, isOpen, onClose }: ItemDetailModalProps)
           .insert({
             user1_id: user!.id < item.user_id ? user!.id : item.user_id,
             user2_id: user!.id < item.user_id ? item.user_id : user!.id,
-            item1_id: user!.id < item.user_id ? selectedItemId : item.id,
-            item2_id: user!.id < item.user_id ? item.id : selectedItemId,
+            item1_id: user!.id < item.user_id ? selectedUserItem.id : item.id,
+            item2_id: user!.id < item.user_id ? item.id : selectedUserItem.id,
           })
           .select()
           .single();
@@ -116,19 +136,37 @@ export const ItemDetailModal = ({ item, isOpen, onClose }: ItemDetailModalProps)
         conversationId = newConvo.id;
       }
 
-      // Calculate top-up needed
-      const valueDifference = item.estimated_value - selectedItemValue;
-      const topUpText = valueDifference > 0 
-        ? ` dengan tambah uang ${formatPrice(valueDifference)}` 
-        : valueDifference < 0
-        ? ` (barang saya lebih mahal ${formatPrice(Math.abs(valueDifference))})`
-        : '';
+      // Build message based on type
+      let initialMessage: string;
       
-      const initialMessage = `Halo! Saya tertarik dengan *${item.name}* kamu (${formatPrice(item.estimated_value)})${item.top_up_value > 0 ? ` + top up ${formatPrice(item.top_up_value)}` : ''}. 
+      if (type === 'barter') {
+        initialMessage = `Halo! 👋
 
-Apakah barang ini masih tersedia? Saya mau tukar dengan *${selectedItemName}* saya (${formatPrice(selectedItemValue)})${topUpText}. 
+Saya tertarik dengan *${item.name}* kamu (${formatPrice(item.estimated_value)}).
 
-Bisa COD kan? Gimana menurutmu?`;
+Saya ingin mengajak kamu **barter langsung** dengan *${selectedUserItem.name}* saya (${formatPrice(selectedUserItem.estimated_value)}).
+
+Apakah barang ini masih tersedia? Bisa COD kan?`;
+      } else {
+        // Tuker tambah
+        if (topUpDirection === 'pay') {
+          initialMessage = `Halo! 👋
+
+Saya tertarik dengan *${item.name}* kamu (${formatPrice(item.estimated_value)}).
+
+Saya ingin **tuker tambah** dengan *${selectedUserItem.name}* saya (${formatPrice(selectedUserItem.estimated_value)}) + uang ${formatPrice(topUpAmount)}.
+
+Apakah barang ini masih tersedia? Gimana menurutmu?`;
+        } else {
+          initialMessage = `Halo! 👋
+
+Saya tertarik dengan *${item.name}* kamu (${formatPrice(item.estimated_value)}).
+
+Saya ingin **tuker tambah** dengan *${selectedUserItem.name}* saya (${formatPrice(selectedUserItem.estimated_value)}). Karena barang saya lebih mahal, saya minta tambahan ${formatPrice(topUpAmount)} dari kamu.
+
+Apakah kamu tertarik? Bisa nego kok! 😊`;
+        }
+      }
 
       // Send initial message with barter proposal
       await supabase
@@ -138,18 +176,18 @@ Bisa COD kan? Gimana menurutmu?`;
           sender_id: user!.id,
           content: initialMessage,
           message_type: 'barter_proposal',
-          item_id: selectedItemId,
+          item_id: selectedUserItem.id,
         });
 
       // Navigate with item data
       navigate(`/chat/${conversationId}`, {
         state: {
           targetItem: item,
-          myItem: selectedItem,
+          myItem: selectedUserItem,
         }
       });
       onClose();
-      setShowItemSelection(false);
+      setSelectedUserItem(null);
     } catch (error) {
       console.error('Error creating conversation:', error);
       toast.error('Gagal membuka chat');
@@ -293,6 +331,24 @@ Bisa COD kan? Gimana menurutmu?`;
       onItemSelected={handleItemSelected}
       targetItem={item}
     />
+
+    {selectedUserItem && (
+      <BarterTypeDialog
+        isOpen={showBarterTypeDialog}
+        onClose={() => {
+          setShowBarterTypeDialog(false);
+          setSelectedUserItem(null);
+        }}
+        onConfirm={handleBarterTypeConfirm}
+        myItem={selectedUserItem}
+        targetItem={{
+          id: item.id,
+          name: item.name,
+          photos: item.photos,
+          estimated_value: item.estimated_value,
+        }}
+      />
+    )}
 
     <ReportDialog
       isOpen={showReportDialog}
