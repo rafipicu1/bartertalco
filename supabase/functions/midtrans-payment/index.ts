@@ -139,6 +139,7 @@ serve(async (req) => {
         redirect_url: snapData.redirect_url,
         order_id: orderId,
         client_key: MIDTRANS_CLIENT_KEY,
+        is_production: IS_PRODUCTION,
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
