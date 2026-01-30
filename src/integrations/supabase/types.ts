@@ -59,6 +59,44 @@ export type Database = {
           },
         ]
       }
+      item_boosts: {
+        Row: {
+          boosted_at: string | null
+          created_at: string | null
+          expires_at: string
+          id: string
+          is_active: boolean | null
+          item_id: string
+          user_id: string
+        }
+        Insert: {
+          boosted_at?: string | null
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          is_active?: boolean | null
+          item_id: string
+          user_id: string
+        }
+        Update: {
+          boosted_at?: string | null
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          is_active?: boolean | null
+          item_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_boosts_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       items: {
         Row: {
           barter_preference: string
@@ -242,6 +280,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          midtrans_response: Json | null
+          order_id: string
+          period: string | null
+          status: string
+          tier: Database["public"]["Enums"]["subscription_tier"] | null
+          transaction_type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          midtrans_response?: Json | null
+          order_id: string
+          period?: string | null
+          status?: string
+          tier?: Database["public"]["Enums"]["subscription_tier"] | null
+          transaction_type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          midtrans_response?: Json | null
+          order_id?: string
+          period?: string | null
+          status?: string
+          tier?: Database["public"]["Enums"]["subscription_tier"] | null
+          transaction_type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -442,6 +522,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_daily_usage: {
+        Row: {
+          created_at: string | null
+          id: string
+          items_viewed: number | null
+          proposal_count: number | null
+          swipe_count: number | null
+          updated_at: string | null
+          usage_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          items_viewed?: number | null
+          proposal_count?: number | null
+          swipe_count?: number | null
+          updated_at?: string | null
+          usage_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          items_viewed?: number | null
+          proposal_count?: number | null
+          swipe_count?: number | null
+          updated_at?: string | null
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_item_views: {
         Row: {
           created_at: string
@@ -525,6 +638,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subscriptions: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          midtrans_order_id: string | null
+          midtrans_transaction_id: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["subscription_status"]
+          tier: Database["public"]["Enums"]["subscription_tier"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          midtrans_order_id?: string | null
+          midtrans_transaction_id?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          tier?: Database["public"]["Enums"]["subscription_tier"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          midtrans_order_id?: string | null
+          midtrans_transaction_id?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          tier?: Database["public"]["Enums"]["subscription_tier"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       wishlist: {
         Row: {
           created_at: string | null
@@ -580,6 +732,14 @@ export type Database = {
         Args: { lat1: number; lat2: number; lon1: number; lon2: number }
         Returns: number
       }
+      check_and_increment_usage: {
+        Args: { p_usage_type: string; p_user_id: string }
+        Returns: {
+          allowed: boolean
+          current_count: number
+          max_count: number
+        }[]
+      }
       create_dummy_items_for_user: {
         Args: { target_user_id: string }
         Returns: undefined
@@ -590,6 +750,27 @@ export type Database = {
           item_id: string
           relevance_score: number
         }[]
+      }
+      get_tier_limits: {
+        Args: { p_tier: Database["public"]["Enums"]["subscription_tier"] }
+        Returns: {
+          active_items: number
+          can_boost: boolean
+          daily_proposals: number
+          daily_swipes: number
+          daily_views: number
+          has_insights: boolean
+          priority_level: number
+          wishlist_limit: number
+        }[]
+      }
+      get_user_active_items_count: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
+      get_user_tier: {
+        Args: { p_user_id: string }
+        Returns: Database["public"]["Enums"]["subscription_tier"]
       }
       has_role: {
         Args: {
@@ -643,6 +824,8 @@ export type Database = {
         | "other"
       report_status: "pending" | "reviewed" | "action_taken" | "dismissed"
       report_type: "user" | "item" | "conversation"
+      subscription_status: "active" | "expired" | "cancelled" | "pending"
+      subscription_tier: "free" | "plus" | "pro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -804,6 +987,8 @@ export const Constants = {
       ],
       report_status: ["pending", "reviewed", "action_taken", "dismissed"],
       report_type: ["user", "item", "conversation"],
+      subscription_status: ["active", "expired", "cancelled", "pending"],
+      subscription_tier: ["free", "plus", "pro"],
     },
   },
 } as const
