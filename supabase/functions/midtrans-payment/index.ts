@@ -10,12 +10,30 @@ const corsHeaders = {
 const MIDTRANS_SERVER_KEY = Deno.env.get('MIDTRANS_SERVER_KEY')
 const MIDTRANS_CLIENT_KEY = Deno.env.get('MIDTRANS_CLIENT_KEY')
 const MIDTRANS_PRODUCTION_RAW = Deno.env.get('MIDTRANS_PRODUCTION') || ''
-const IS_PRODUCTION = MIDTRANS_PRODUCTION_RAW.toLowerCase().trim() === 'true' || MIDTRANS_PRODUCTION_RAW === '1'
+
+function parseBooleanEnv(raw: string): boolean | null {
+  const v = raw.toLowerCase().trim()
+  if (!v) return null
+  if (v === 'true' || v === '1' || v === 'yes' || v === 'y') return true
+  if (v === 'false' || v === '0' || v === 'no' || v === 'n') return false
+  // If user accidentally pasted a key/string here, treat it as unset and infer from key prefix
+  return null
+}
+
+// Midtrans sendiri membedakan sandbox vs production lewat domain + jenis key.
+// Jadi kalau MIDTRANS_PRODUCTION tidak diset, kita infer otomatis:
+// - Key sandbox biasanya prefix "SB-"
+// - Kalau bukan "SB-" kita anggap production
+const productionOverride = parseBooleanEnv(MIDTRANS_PRODUCTION_RAW)
+const inferredProduction = !(MIDTRANS_SERVER_KEY?.startsWith('SB-') || MIDTRANS_CLIENT_KEY?.startsWith('SB-'))
+const IS_PRODUCTION = productionOverride ?? inferredProduction
 
 console.log('Midtrans config check:', {
   hasServerKey: !!MIDTRANS_SERVER_KEY,
   hasClientKey: !!MIDTRANS_CLIENT_KEY,
   productionRaw: MIDTRANS_PRODUCTION_RAW,
+  productionOverride,
+  inferredProduction,
   isProduction: IS_PRODUCTION,
   serverKeyPrefix: MIDTRANS_SERVER_KEY?.substring(0, 5) || 'N/A',
   clientKeyPrefix: MIDTRANS_CLIENT_KEY?.substring(0, 5) || 'N/A',
@@ -32,6 +50,20 @@ function assertMidtransConfig() {
   // Heuristic: sandbox keys typically start with SB-
   const serverLooksSandbox = MIDTRANS_SERVER_KEY.startsWith('SB-')
   const clientLooksSandbox = MIDTRANS_CLIENT_KEY.startsWith('SB-')
+
+  // If user sets MIDTRANS_PRODUCTION explicitly, validate it matches the key type.
+  if (productionOverride !== null) {
+    if (productionOverride && (serverLooksSandbox || clientLooksSandbox)) {
+      throw new Error(
+        'MIDTRANS_PRODUCTION=true tapi terdeteksi key SANDBOX (SB-...). Ganti ke production keys.'
+      )
+    }
+    if (!productionOverride && (!serverLooksSandbox || !clientLooksSandbox)) {
+      throw new Error(
+        'MIDTRANS_PRODUCTION=false tapi terdeteksi key PRODUCTION. Ganti ke sandbox keys (SB-...) atau set MIDTRANS_PRODUCTION=true.'
+      )
+    }
+  }
 
   if (IS_PRODUCTION && (serverLooksSandbox || clientLooksSandbox)) {
     throw new Error(
