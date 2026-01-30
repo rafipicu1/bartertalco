@@ -113,6 +113,19 @@ export default function Admin() {
   const [showAddAdmin, setShowAddAdmin] = useState(false);
   const [processingAdmin, setProcessingAdmin] = useState(false);
 
+  // User upgrade state
+  const [upgradeUser, setUpgradeUser] = useState<UserProfile | null>(null);
+  const [selectedTier, setSelectedTier] = useState<'free' | 'plus' | 'pro'>('plus');
+  const [processingUpgrade, setProcessingUpgrade] = useState(false);
+
+  // Create user state
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserUsername, setNewUserUsername] = useState('');
+  const [newUserFullName, setNewUserFullName] = useState('');
+  const [processingCreateUser, setProcessingCreateUser] = useState(false);
+
   useEffect(() => {
     checkAdminRole();
   }, [user]);
@@ -384,6 +397,67 @@ export default function Admin() {
     }
   };
 
+  const handleUpgradeUser = async () => {
+    if (!upgradeUser) return;
+
+    setProcessingUpgrade(true);
+    try {
+      const response = await supabase.functions.invoke('seed-test-users', {
+        body: { 
+          action: 'upgrade_user',
+          user_id: upgradeUser.id,
+          tier: selectedTier,
+        },
+      });
+
+      if (response.error) throw response.error;
+
+      toast.success(`User @${upgradeUser.username} berhasil diupgrade ke ${selectedTier.toUpperCase()}!`);
+      setUpgradeUser(null);
+      setSelectedTier('plus');
+    } catch (error: any) {
+      console.error('Error upgrading user:', error);
+      toast.error(error.message || 'Gagal upgrade user');
+    } finally {
+      setProcessingUpgrade(false);
+    }
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUserEmail || !newUserPassword || !newUserUsername) {
+      toast.error('Email, password, dan username wajib diisi');
+      return;
+    }
+
+    setProcessingCreateUser(true);
+    try {
+      const response = await supabase.functions.invoke('seed-test-users', {
+        body: { 
+          action: 'create_user',
+          email: newUserEmail,
+          password: newUserPassword,
+          username: newUserUsername,
+          full_name: newUserFullName || newUserUsername,
+        },
+      });
+
+      if (response.error) throw response.error;
+
+      toast.success('User baru berhasil dibuat!');
+      setNewUserEmail('');
+      setNewUserPassword('');
+      setNewUserUsername('');
+      setNewUserFullName('');
+      setShowCreateUser(false);
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error creating user:', error);
+      toast.error(error.message || 'Gagal membuat user');
+    } finally {
+      setProcessingCreateUser(false);
+    }
+  };
+
   const formatPrice = (value: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -570,14 +644,20 @@ export default function Admin() {
           {/* Users Tab */}
           <TabsContent value="users">
             <div className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Cari pengguna..."
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  className="pl-10"
-                />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cari pengguna..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Button onClick={() => setShowCreateUser(true)}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Buat User
+                </Button>
               </div>
 
               <div className="grid gap-4">
@@ -604,14 +684,27 @@ export default function Admin() {
                           <Badge className="bg-green-100 text-green-800">Verified</Badge>
                         )}
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedUser(profile)}
-                      >
-                        <Ban className="h-4 w-4 mr-1" />
-                        Moderasi
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setUpgradeUser(profile);
+                            setSelectedTier('plus');
+                          }}
+                        >
+                          <Crown className="h-4 w-4 mr-1" />
+                          Upgrade
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedUser(profile)}
+                        >
+                          <Ban className="h-4 w-4 mr-1" />
+                          Moderasi
+                        </Button>
+                      </div>
                     </div>
                   </Card>
                 ))}
@@ -920,6 +1013,146 @@ export default function Admin() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   'Buat Admin'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upgrade User Dialog */}
+      <Dialog open={!!upgradeUser} onOpenChange={() => setUpgradeUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-yellow-500" />
+              Upgrade Subscription
+            </DialogTitle>
+            <DialogDescription>
+              Upgrade langganan @{upgradeUser?.username} secara manual
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Pilih Tier</label>
+              <Select value={selectedTier} onValueChange={(v) => setSelectedTier(v as any)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="free">Free</SelectItem>
+                  <SelectItem value="plus">Plus (Rp29.000/bulan)</SelectItem>
+                  <SelectItem value="pro">Pro (Rp79.000/bulan)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="p-3 bg-muted rounded-lg text-sm">
+              {selectedTier === 'free' && (
+                <p>User akan dikembalikan ke tier Free dengan batasan standar.</p>
+              )}
+              {selectedTier === 'plus' && (
+                <p>✅ Swipe unlimited, 5 item aktif, wishlist unlimited, boost item</p>
+              )}
+              {selectedTier === 'pro' && (
+                <p>✅ Semua fitur Plus + upload unlimited, prioritas homepage, badge PRO</p>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setUpgradeUser(null)}
+                className="flex-1"
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleUpgradeUser}
+                disabled={processingUpgrade}
+                className="flex-1"
+              >
+                {processingUpgrade ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  `Upgrade ke ${selectedTier.toUpperCase()}`
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create User Dialog */}
+      <Dialog open={showCreateUser} onOpenChange={setShowCreateUser}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-primary" />
+              Buat User Baru
+            </DialogTitle>
+            <DialogDescription>
+              Buat akun user baru dengan data lengkap
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email *</label>
+              <Input
+                type="email"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+                placeholder="user@example.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Password *</label>
+              <Input
+                type="password"
+                value={newUserPassword}
+                onChange={(e) => setNewUserPassword(e.target.value)}
+                placeholder="Minimal 6 karakter"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Username *</label>
+              <Input
+                value={newUserUsername}
+                onChange={(e) => setNewUserUsername(e.target.value)}
+                placeholder="username_unik"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nama Lengkap</label>
+              <Input
+                value={newUserFullName}
+                onChange={(e) => setNewUserFullName(e.target.value)}
+                placeholder="Nama lengkap (opsional)"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowCreateUser(false)}
+                className="flex-1"
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleCreateUser}
+                disabled={!newUserEmail || !newUserPassword || !newUserUsername || processingCreateUser}
+                className="flex-1"
+              >
+                {processingCreateUser ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Buat User'
                 )}
               </Button>
             </div>
