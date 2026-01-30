@@ -3,12 +3,30 @@ import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { SwipeCard } from '@/components/SwipeCard';
 import { Button } from '@/components/ui/button';
-import { Sparkles, User, Plus, Heart, Home } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Sparkles, User, Plus, Heart, Home, Filter, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { MobileLayout } from '@/components/MobileLayout';
 import { useSubscription } from '@/hooks/useSubscription';
 import { UpgradeModal } from '@/components/UpgradeModal';
+
+const CATEGORY_OPTIONS = [
+  { value: 'all', label: 'Semua' },
+  { value: 'elektronik', label: 'Elektronik' },
+  { value: 'kendaraan', label: 'Kendaraan' },
+  { value: 'properti', label: 'Properti' },
+  { value: 'fashion', label: 'Fashion' },
+  { value: 'hobi_koleksi', label: 'Hobi & Koleksi' },
+  { value: 'olahraga', label: 'Olahraga' },
+  { value: 'musik', label: 'Musik' },
+  { value: 'gaming', label: 'Gaming' },
+  { value: 'perlengkapan_rumah', label: 'Rumah Tangga' },
+  { value: 'mainan_anak', label: 'Mainan & Anak' },
+  { value: 'kantor_industri', label: 'Kantor & Industri' },
+  { value: 'kesehatan_kecantikan', label: 'Kesehatan' },
+  { value: 'other', label: 'Lainnya' },
+];
 
 export default function Swipe() {
   const { user, signOut } = useAuth();
@@ -20,6 +38,7 @@ export default function Swipe() {
   const [userItems, setUserItems] = useState<any[]>([]);
   const [selectedUserItem, setSelectedUserItem] = useState<any | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   
   const { canSwipe, incrementUsage, getRemainingSwipes, usage, limits } = useSubscription();
 
@@ -32,7 +51,7 @@ export default function Swipe() {
       setLoading(true);
       loadItems();
     }
-  }, [selectedUserItem]);
+  }, [selectedUserItem, selectedCategory]);
 
   const loadUserItems = async () => {
     if (!user) return;
@@ -105,8 +124,13 @@ export default function Swipe() {
         .eq('is_active', true)
         .neq('user_id', user.id);
 
-      // If we have personalized items, use those
-      if (itemIds.length > 0) {
+      // Apply category filter if selected
+      if (selectedCategory && selectedCategory !== 'all') {
+        query = query.eq('category', selectedCategory as any);
+      }
+
+      // If we have personalized items and no category filter, use those
+      if (itemIds.length > 0 && selectedCategory === 'all') {
         query = query.in('id', itemIds);
       }
 
@@ -320,8 +344,43 @@ export default function Swipe() {
                 <p className="text-xs font-medium text-primary">
                   Swipe: {getRemainingSwipes()} tersisa
                 </p>
-              </div>
-            )}
+          </div>
+        )}
+
+        {/* Category Filter */}
+        {selectedUserItem && (
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Filter Kategori:</span>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {CATEGORY_OPTIONS.map((cat) => (
+                <Badge
+                  key={cat.value}
+                  variant={selectedCategory === cat.value ? 'default' : 'outline'}
+                  className={`cursor-pointer whitespace-nowrap flex-shrink-0 transition-all ${
+                    selectedCategory === cat.value
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-accent hover:text-accent-foreground'
+                  }`}
+                  onClick={() => setSelectedCategory(cat.value)}
+                >
+                  {cat.label}
+                  {selectedCategory === cat.value && cat.value !== 'all' && (
+                    <X 
+                      className="ml-1 h-3 w-3" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedCategory('all');
+                      }}
+                    />
+                  )}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
           </div>
         )}
 

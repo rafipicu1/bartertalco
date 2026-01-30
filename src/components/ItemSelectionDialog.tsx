@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Package } from "lucide-react";
+import { Loader2, Package, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { FrequentlyWishlistedItems } from "@/components/FrequentlyWishlistedItems";
 
 interface UserItem {
   id: string;
@@ -93,46 +95,61 @@ export const ItemSelectionDialog = ({ isOpen, onClose, onItemSelected, targetIte
             </Button>
           </div>
         ) : (
-          <div className="grid gap-4">
-            {items.map((item) => {
-              const topUp = calculateTopUp(item.estimated_value);
-              return (
-                <div
-                  key={item.id}
-                  className="flex gap-4 p-4 border rounded-lg hover:border-primary transition-colors cursor-pointer"
-                  onClick={() => onItemSelected(item.id, item.name, item.estimated_value, item)}
-                >
-                  <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                    {item.photos[0] ? (
-                      <img
-                        src={item.photos[0]}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Package className="h-8 w-8 text-muted-foreground" />
+          <div className="space-y-4">
+            {/* Frequently Wishlisted Items Section - shown when target is more expensive */}
+            <FrequentlyWishlistedItems 
+              targetItemValue={targetItem.estimated_value}
+              onItemSelected={onItemSelected}
+            />
+
+            {/* User's all items */}
+            <div>
+              <div className="flex items-center gap-2 text-sm font-medium mb-3">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span>Semua Barangmu</span>
+              </div>
+              <div className="grid gap-3">
+                {items.map((item) => {
+                  const topUp = calculateTopUp(item.estimated_value);
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex gap-4 p-4 border rounded-lg hover:border-primary transition-colors cursor-pointer"
+                      onClick={() => onItemSelected(item.id, item.name, item.estimated_value, item)}
+                    >
+                      <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                        {item.photos[0] ? (
+                          <img
+                            src={item.photos[0]}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="h-8 w-8 text-muted-foreground" />
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">{item.name}</h3>
-                    <Badge variant="outline" className="mb-2">{item.category}</Badge>
-                    <p className="text-sm font-medium text-primary">
-                      {formatPrice(item.estimated_value)}
-                    </p>
-                    {topUp !== 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {topUp > 0 
-                          ? `+ Tambah ${formatPrice(topUp)}`
-                          : `Barang kamu lebih mahal ${formatPrice(Math.abs(topUp))}`
-                        }
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                      <div className="flex-1">
+                        <h3 className="font-semibold mb-1">{item.name}</h3>
+                        <Badge variant="outline" className="mb-2">{item.category}</Badge>
+                        <p className="text-sm font-medium text-primary">
+                          {formatPrice(item.estimated_value)}
+                        </p>
+                        {topUp !== 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {topUp > 0 
+                              ? `+ Tambah ${formatPrice(topUp)}`
+                              : `Barang kamu lebih mahal ${formatPrice(Math.abs(topUp))}`
+                            }
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </DialogContent>
