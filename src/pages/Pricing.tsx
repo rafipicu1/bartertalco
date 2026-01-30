@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -8,19 +8,7 @@ import { MobileLayout } from '@/components/MobileLayout';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-
-declare global {
-  interface Window {
-    snap: {
-      pay: (token: string, options: {
-        onSuccess: (result: any) => void;
-        onPending: (result: any) => void;
-        onError: (result: any) => void;
-        onClose: () => void;
-      }) => void;
-    };
-  }
-}
+import { loadSnapScript, openSnapPayment, isSnapPopupOpen, resetSnapState } from '@/lib/midtrans';
 
 const plans = [
   {
@@ -79,8 +67,20 @@ export default function Pricing() {
   const { tier } = useSubscription();
   const [loading, setLoading] = useState<string | null>(null);
 
+  // Reset snap state when leaving the page
+  useEffect(() => {
+    return () => {
+      resetSnapState();
+    };
+  }, []);
+
   const handleSubscribe = async (productType: string) => {
     if (productType === 'free') return;
+
+    // Prevent double clicks
+    if (loading || isSnapPopupOpen()) {
+      return;
+    }
 
     setLoading(productType);
 
@@ -102,22 +102,11 @@ export default function Pricing() {
 
       const { snap_token, client_key, is_production } = response.data;
 
-      // Load Midtrans Snap (production or sandbox based on backend config)
-      if (!window.snap) {
-        const script = document.createElement('script');
-        const snapUrl = is_production 
-          ? 'https://app.midtrans.com/snap/snap.js'
-          : 'https://app.sandbox.midtrans.com/snap/snap.js';
-        script.src = snapUrl;
-        script.setAttribute('data-client-key', client_key);
-        document.body.appendChild(script);
-        
-        await new Promise(resolve => {
-          script.onload = resolve;
-        });
-      }
+      // Load Midtrans Snap
+      await loadSnapScript(client_key, is_production);
 
-      window.snap.pay(snap_token, {
+      // Open payment popup
+      const opened = openSnapPayment(snap_token, {
         onSuccess: (result: any) => {
           console.log('Payment success:', result);
           toast.success('Pembayaran berhasil! 🎉');
@@ -135,6 +124,10 @@ export default function Pricing() {
           console.log('Payment popup closed');
         },
       });
+      
+      if (!opened) {
+        toast.error('Popup pembayaran sedang terbuka');
+      }
     } catch (error: any) {
       console.error('Payment error:', error);
       toast.error(error.message || 'Terjadi kesalahan');
