@@ -174,7 +174,7 @@ const Index = () => {
 
   return (
     <MobileLayout>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background overflow-x-hidden max-w-full">
         {/* Header - simplified for mobile */}
         <header className="border-b bg-card sticky top-0 z-10 shadow-sm">
           <div className="container mx-auto px-4 py-3 flex justify-between items-center">
@@ -263,7 +263,7 @@ const Index = () => {
           </div>
         </section>
 
-        <main className="container mx-auto px-4 py-4 md:py-8">
+        <main className="container mx-auto px-4 py-4 md:py-8 overflow-x-hidden">
           {/* Items Header */}
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-bold">

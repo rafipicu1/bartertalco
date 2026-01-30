@@ -96,10 +96,10 @@ export function SwipeCard({ item, onSwipe, style, isLiked = false }: SwipeCardPr
       onDragEnd={handleDragEnd}
       animate={{ x: exitX }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-      className="absolute w-full"
+      className="absolute w-full max-w-full overflow-hidden"
     >
-      <Card className="overflow-hidden shadow-2xl border-2 border-border/50 bg-card cursor-grab active:cursor-grabbing">
-        <div className="relative h-96">
+      <Card className="overflow-hidden shadow-2xl border-2 border-border/50 bg-card cursor-grab active:cursor-grabbing max-w-full">
+        <div className="relative h-80 sm:h-96">
           <img
             src={item.photos[0] || '/placeholder.svg'}
             alt={item.name}

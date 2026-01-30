@@ -371,7 +371,7 @@ export default function ChatDetail() {
 
   return (
     <MobileLayout showBottomNav={false}>
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="min-h-screen bg-background flex flex-col overflow-x-hidden max-w-full">
         <header className="border-b bg-card sticky top-0 z-10 shadow-sm">
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-4">

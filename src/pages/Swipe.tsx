@@ -346,7 +346,7 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
       </header>
 
       {/* Swipe Area */}
-      <main className="container mx-auto px-4 py-8 max-w-md">
+      <main className="container mx-auto px-4 py-4 sm:py-8 max-w-md overflow-x-hidden">
         {/* User Items Selector */}
         {userItems.length === 0 ? (
           <div className="mb-4 p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-center">
@@ -433,7 +433,7 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
         )}
 
         {selectedUserItem && currentItem ? (
-          <div className="relative h-[600px]">
+          <div className="relative h-[500px] sm:h-[600px] max-w-full overflow-hidden">
             <SwipeCard
               key={currentItem.id}
               item={currentItem}
@@ -442,12 +442,12 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
             />
           </div>
         ) : selectedUserItem && !currentItem ? (
-          <div className="flex flex-col items-center justify-center h-[600px] text-center space-y-4">
-            <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center">
-              <Sparkles className="h-12 w-12 text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center h-[400px] sm:h-[600px] text-center space-y-4 px-4">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-muted rounded-full flex items-center justify-center">
+              <Sparkles className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground" />
             </div>
-            <h2 className="text-2xl font-bold">Tidak ada barang lagi!</h2>
-            <p className="text-muted-foreground max-w-sm">
+            <h2 className="text-xl sm:text-2xl font-bold">Tidak ada barang lagi!</h2>
+            <p className="text-muted-foreground max-w-sm text-sm sm:text-base">
               Kamu sudah melihat semua barang yang tersedia. Coba lagi nanti!
             </p>
             <Button

@@ -11,8 +11,8 @@ export const MobileLayout = ({ children, showBottomNav = true }: MobileLayoutPro
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className={showBottomNav && user ? "pb-20 md:pb-0" : ""}>
+    <div className="min-h-screen bg-background overflow-x-hidden max-w-full">
+      <div className={`overflow-x-hidden max-w-full ${showBottomNav && user ? "pb-20 md:pb-0" : ""}`}>
         {children}
       </div>
       {showBottomNav && user && <BottomNav />}
