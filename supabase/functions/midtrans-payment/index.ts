@@ -9,7 +9,17 @@ const corsHeaders = {
 // Midtrans configuration
 const MIDTRANS_SERVER_KEY = Deno.env.get('MIDTRANS_SERVER_KEY')
 const MIDTRANS_CLIENT_KEY = Deno.env.get('MIDTRANS_CLIENT_KEY')
-const IS_PRODUCTION = Deno.env.get('MIDTRANS_PRODUCTION') === 'true'
+const MIDTRANS_PRODUCTION_RAW = Deno.env.get('MIDTRANS_PRODUCTION') || ''
+const IS_PRODUCTION = MIDTRANS_PRODUCTION_RAW.toLowerCase().trim() === 'true' || MIDTRANS_PRODUCTION_RAW === '1'
+
+console.log('Midtrans config check:', {
+  hasServerKey: !!MIDTRANS_SERVER_KEY,
+  hasClientKey: !!MIDTRANS_CLIENT_KEY,
+  productionRaw: MIDTRANS_PRODUCTION_RAW,
+  isProduction: IS_PRODUCTION,
+  serverKeyPrefix: MIDTRANS_SERVER_KEY?.substring(0, 5) || 'N/A',
+  clientKeyPrefix: MIDTRANS_CLIENT_KEY?.substring(0, 5) || 'N/A',
+})
 
 function assertMidtransConfig() {
   if (!MIDTRANS_SERVER_KEY) {
