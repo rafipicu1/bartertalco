@@ -42,6 +42,8 @@ import {
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { UserDetailDialog } from '@/components/admin/UserDetailDialog';
+import { ItemDetailDialog } from '@/components/admin/ItemDetailDialog';
 
 interface Report {
   id: string;
@@ -65,19 +67,33 @@ interface UserProfile {
   location: string;
   created_at: string;
   verified: boolean;
+  province?: string | null;
+  city?: string | null;
+  district?: string | null;
+  bio?: string | null;
 }
 
 interface Item {
   id: string;
   name: string;
+  description: string;
+  detailed_minus: string;
   photos: string[];
   estimated_value: number;
+  top_up_value: number | null;
   category: string;
+  condition: string;
+  location: string;
+  province: string | null;
+  city: string | null;
+  district: string | null;
   is_active: boolean;
   created_at: string;
   user_id: string;
+  barter_preference: string;
   profiles?: {
     username: string;
+    full_name?: string;
   };
 }
 
@@ -105,7 +121,10 @@ export default function Admin() {
   // Items state
   const [items, setItems] = useState<Item[]>([]);
   const [itemSearch, setItemSearch] = useState('');
+  const [viewingItem, setViewingItem] = useState<Item | null>(null);
 
+  // User detail view state
+  const [viewingUser, setViewingUser] = useState<UserProfile | null>(null);
   // Admin management state
   const [admins, setAdmins] = useState<any[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState('');
@@ -238,7 +257,7 @@ export default function Admin() {
         .from('items')
         .select(`
           *,
-          profiles (username)
+          profiles (username, full_name)
         `)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -662,7 +681,11 @@ export default function Admin() {
 
               <div className="grid gap-4">
                 {filteredUsers.map((profile) => (
-                  <Card key={profile.id} className="p-4">
+                  <Card 
+                    key={profile.id} 
+                    className="p-4 cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => setViewingUser(profile)}
+                  >
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -681,10 +704,17 @@ export default function Admin() {
                           <p className="text-sm text-muted-foreground">{profile.location}</p>
                         </div>
                         {profile.verified && (
-                          <Badge className="bg-green-100 text-green-800">Verified</Badge>
+                          <Badge className="bg-green-500/20 text-green-700">Verified</Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setViewingUser(profile)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -727,7 +757,11 @@ export default function Admin() {
 
               <div className="grid gap-4">
                 {filteredItems.map((item) => (
-                  <Card key={item.id} className="p-4">
+                  <Card 
+                    key={item.id} 
+                    className="p-4 cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => setViewingItem(item)}
+                  >
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3">
                         <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden">
@@ -747,7 +781,14 @@ export default function Admin() {
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setViewingItem(item)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                         <Badge variant={item.is_active ? 'default' : 'secondary'}>
                           {item.is_active ? 'Aktif' : 'Nonaktif'}
                         </Badge>
@@ -1159,6 +1200,21 @@ export default function Admin() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* User Detail Dialog */}
+      <UserDetailDialog
+        user={viewingUser}
+        open={!!viewingUser}
+        onOpenChange={(open) => !open && setViewingUser(null)}
+      />
+
+      {/* Item Detail Dialog */}
+      <ItemDetailDialog
+        item={viewingItem}
+        open={!!viewingItem}
+        onOpenChange={(open) => !open && setViewingItem(null)}
+        onToggleActive={toggleItemActive}
+      />
     </div>
   );
 }

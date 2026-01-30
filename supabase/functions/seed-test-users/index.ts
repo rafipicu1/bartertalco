@@ -167,9 +167,77 @@ Deno.serve(async (req) => {
       }
     })
 
-    // Check for create_admin action
+    // Check for actions
     const body = await req.json().catch(() => ({}))
-    
+
+    // Action: Get User Details (for admin panel)
+    if (body.action === 'get_user_details') {
+      const { user_id } = body
+      
+      if (!user_id) {
+        return new Response(
+          JSON.stringify({ error: 'user_id is required' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        )
+      }
+
+      // Get user from auth
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(user_id)
+      
+      if (authError || !authData.user) {
+        return new Response(
+          JSON.stringify({ error: 'User not found' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+        )
+      }
+
+      // Get profile
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('id', user_id)
+        .single()
+
+      // Get subscription
+      const { data: subscription } = await supabaseAdmin
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', user_id)
+        .single()
+
+      // Get user items count
+      const { count: itemsCount } = await supabaseAdmin
+        .from('items')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user_id)
+
+      // Get user bans
+      const { data: bans } = await supabaseAdmin
+        .from('user_bans')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('is_active', true)
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          user: {
+            id: authData.user.id,
+            email: authData.user.email,
+            phone: authData.user.phone,
+            created_at: authData.user.created_at,
+            last_sign_in_at: authData.user.last_sign_in_at,
+            email_confirmed_at: authData.user.email_confirmed_at,
+          },
+          profile,
+          subscription,
+          items_count: itemsCount || 0,
+          active_bans: bans || [],
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
+    }
+
     // Action: Create Admin
     if (body.action === 'create_admin') {
       const { email, password } = body
