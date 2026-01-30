@@ -44,7 +44,7 @@ const PRICING = {
   plus_yearly: { amount: 299000, name: 'Bartr Plus (Tahunan)', tier: 'plus', period: 'yearly' },
   pro_monthly: { amount: 79000, name: 'Bartr Pro (Bulanan)', tier: 'pro', period: 'monthly' },
   pro_yearly: { amount: 799000, name: 'Bartr Pro (Tahunan)', tier: 'pro', period: 'yearly' },
-  single_post: { amount: 5000, name: 'Upload Item Tambahan', tier: null, period: null },
+  single_post: { amount: 3000, name: 'Upload Item Tambahan', tier: null, period: null },
   boost_24h: { amount: 10000, name: 'Boost Item 24 Jam', tier: null, period: null },
 }
 

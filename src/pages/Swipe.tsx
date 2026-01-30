@@ -349,11 +349,16 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
       <main className="container mx-auto px-4 py-4 sm:py-8 max-w-md overflow-x-hidden">
         {/* User Items Selector */}
         {userItems.length === 0 ? (
-          <div className="mb-4 p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-center">
-            <p className="text-sm mb-3">
-              ⚠️ Kamu belum punya barang untuk ditukar.
+          <div className="mb-4 p-6 bg-primary/5 border border-primary/20 rounded-xl text-center space-y-3">
+            <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
+              <Plus className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="font-semibold text-lg">Yuk Mulai Barter! 🔄</h3>
+            <p className="text-sm text-muted-foreground">
+              Untuk mulai swipe dan cari barang yang kamu mau, kamu perlu pasang barang dulu untuk ditukar.
             </p>
-            <Button onClick={() => navigate('/upload')} size="sm">
+            <Button onClick={() => navigate('/upload')} className="bg-gradient-primary">
+              <Plus className="h-4 w-4 mr-2" />
               Pasang Barang Pertama
             </Button>
           </div>

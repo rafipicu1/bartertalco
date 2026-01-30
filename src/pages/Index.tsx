@@ -275,11 +275,21 @@ const Index = () => {
           </div>
 
           {filteredItems.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-lg text-muted-foreground mb-4">
+            <div className="text-center py-16 px-4">
+              <div className="w-20 h-20 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+                <Sparkles className="h-10 w-10 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">
                 {searchQuery ? 'Tidak ada barang yang cocok' : 'Belum ada barang tersedia'}
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                {user 
+                  ? 'Jadi yang pertama pasang barang untuk ditukar!' 
+                  : 'Login untuk mulai pasang barang dan barter dengan pengguna lain.'}
               </p>
-              <Button onClick={() => navigate('/upload')}>Pasang Barang Pertama</Button>
+              <Button onClick={() => navigate(user ? '/upload' : '/auth')}>
+                {user ? 'Pasang Barang Pertama' : 'Login Sekarang'}
+              </Button>
             </div>
           ) : (
             <>
