@@ -2,3 +2,6 @@ project_id = "lhlufnidsulfkycxfnhu"
 
 [functions.seed-test-users]
 verify_jwt = false
+
+[functions.midtrans-payment]
+verify_jwt = false

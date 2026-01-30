@@ -167,6 +167,81 @@ Deno.serve(async (req) => {
       }
     })
 
+    // Check for create_admin action
+    const body = await req.json().catch(() => ({}))
+    
+    if (body.action === 'create_admin') {
+      const { email, password } = body
+      
+      if (!email || !password) {
+        return new Response(
+          JSON.stringify({ error: 'Email and password are required' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        )
+      }
+
+      // Create admin user
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          username: email.split('@')[0] + '_admin',
+          full_name: 'Admin User',
+          location: 'Jakarta'
+        }
+      })
+
+      if (authError) {
+        return new Response(
+          JSON.stringify({ error: authError.message }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        )
+      }
+
+      if (!authData.user) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to create user' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        )
+      }
+
+      // Create profile
+      await supabaseAdmin
+        .from('profiles')
+        .upsert({
+          id: authData.user.id,
+          username: email.split('@')[0] + '_admin',
+          full_name: 'Admin User',
+          location: 'Jakarta'
+        })
+
+      // Assign admin role
+      const { error: roleError } = await supabaseAdmin
+        .from('user_roles')
+        .insert({
+          user_id: authData.user.id,
+          role: 'admin'
+        })
+
+      if (roleError) {
+        console.error('Error assigning admin role:', roleError)
+        return new Response(
+          JSON.stringify({ error: 'User created but failed to assign admin role' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        )
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Admin created successfully',
+          user_id: authData.user.id 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
+    }
+
     const results: Array<{email: string; status: string; error?: string}> = []
 
     for (const user of TEST_USERS) {

@@ -7,6 +7,8 @@ import { Sparkles, User, Plus, Heart, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { MobileLayout } from '@/components/MobileLayout';
+import { useSubscription } from '@/hooks/useSubscription';
+import { UpgradeModal } from '@/components/UpgradeModal';
 
 export default function Swipe() {
   const { user, signOut } = useAuth();
@@ -17,6 +19,9 @@ export default function Swipe() {
   const [likedItemIds, setLikedItemIds] = useState<Set<string>>(new Set());
   const [userItems, setUserItems] = useState<any[]>([]);
   const [selectedUserItem, setSelectedUserItem] = useState<any | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  
+  const { canSwipe, incrementUsage, getRemainingSwipes, usage, limits } = useSubscription();
 
   useEffect(() => {
     loadUserItems();
@@ -126,9 +131,18 @@ export default function Swipe() {
   const handleSwipe = async (direction: 'left' | 'right' | 'up') => {
     if (!user || !selectedUserItem || currentIndex >= items.length) return;
 
+    // Check swipe limit
+    if (!canSwipe()) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     const currentItem = items[currentIndex];
 
     try {
+      // Increment usage
+      await incrementUsage('swipe');
+
       if (direction === 'up') {
         // Add to wishlist
         await supabase
@@ -141,17 +155,19 @@ export default function Swipe() {
       }
 
       if (direction === 'right' || direction === 'left') {
-        // Record swipe with user's item
+        // Record swipe with user's item (upsert to handle duplicates)
         const { error } = await supabase
           .from('swipes')
-          .insert({
+          .upsert({
             swiper_id: user.id,
             user_item_id: selectedUserItem.id,
             item_id: currentItem.id,
             direction,
+          }, {
+            onConflict: 'swiper_id,item_id'
           });
 
-        if (error) throw error;
+        if (error && error.code !== '23505') throw error;
 
         if (direction === 'right') {
           // Check if there's a match between these specific items
@@ -297,9 +313,14 @@ export default function Swipe() {
               ))}
             </div>
             {selectedUserItem && (
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Rekomendasi barang untukmu ✨
-              </p>
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-xs text-muted-foreground">
+                  Rekomendasi barang untukmu ✨
+                </p>
+                <p className="text-xs font-medium text-primary">
+                  Swipe: {getRemainingSwipes()} tersisa
+                </p>
+              </div>
             )}
           </div>
         )}
@@ -331,6 +352,14 @@ export default function Swipe() {
           </div>
         ) : null}
       </main>
+
+      <UpgradeModal
+        open={showUpgradeModal}
+        onOpenChange={setShowUpgradeModal}
+        limitType="swipe"
+        currentCount={usage.swipe_count}
+        maxCount={limits.daily_swipes}
+      />
     </MobileLayout>
   );
 }
