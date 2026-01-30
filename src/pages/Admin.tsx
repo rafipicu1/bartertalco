@@ -35,6 +35,9 @@ import {
   ArrowLeft,
   Loader2,
   FileText,
+  UserPlus,
+  Crown,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -103,6 +106,13 @@ export default function Admin() {
   const [items, setItems] = useState<Item[]>([]);
   const [itemSearch, setItemSearch] = useState('');
 
+  // Admin management state
+  const [admins, setAdmins] = useState<any[]>([]);
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [showAddAdmin, setShowAddAdmin] = useState(false);
+  const [processingAdmin, setProcessingAdmin] = useState(false);
+
   useEffect(() => {
     checkAdminRole();
   }, [user]);
@@ -153,6 +163,30 @@ export default function Admin() {
       case 'items':
         await fetchItems();
         break;
+      case 'admins':
+        await fetchAdmins();
+        break;
+    }
+  };
+
+  const fetchAdmins = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select(`
+          *,
+          profiles:user_id (
+            username,
+            full_name,
+            profile_photo_url
+          )
+        `)
+        .eq('role', 'admin');
+
+      if (error) throw error;
+      setAdmins(data || []);
+    } catch (error) {
+      console.error('Error fetching admins:', error);
     }
   };
 
@@ -279,6 +313,77 @@ export default function Admin() {
     }
   };
 
+  const handleAddAdmin = async () => {
+    if (!newAdminEmail || !newAdminPassword) {
+      toast.error('Email dan password wajib diisi');
+      return;
+    }
+
+    setProcessingAdmin(true);
+    try {
+      // Create new user via edge function (admin auth)
+      const response = await supabase.functions.invoke('seed-test-users', {
+        body: { 
+          action: 'create_admin',
+          email: newAdminEmail,
+          password: newAdminPassword,
+        },
+      });
+
+      if (response.error) throw response.error;
+
+      toast.success('Admin baru berhasil ditambahkan!');
+      setNewAdminEmail('');
+      setNewAdminPassword('');
+      setShowAddAdmin(false);
+      fetchAdmins();
+    } catch (error: any) {
+      console.error('Error creating admin:', error);
+      toast.error(error.message || 'Gagal membuat admin');
+    } finally {
+      setProcessingAdmin(false);
+    }
+  };
+
+  const handleRemoveAdmin = async (roleId: string, userId: string) => {
+    if (userId === user?.id) {
+      toast.error('Tidak bisa menghapus diri sendiri');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('id', roleId);
+
+      if (error) throw error;
+      toast.success('Admin berhasil dihapus');
+      fetchAdmins();
+    } catch (error) {
+      console.error('Error removing admin:', error);
+      toast.error('Gagal menghapus admin');
+    }
+  };
+
+  const handleMakeAdmin = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: 'admin',
+        });
+
+      if (error) throw error;
+      toast.success('User berhasil dijadikan admin');
+      fetchAdmins();
+    } catch (error: any) {
+      console.error('Error making admin:', error);
+      toast.error(error.message || 'Gagal menjadikan admin');
+    }
+  };
+
   const formatPrice = (value: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -399,18 +504,22 @@ export default function Admin() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="reports" className="gap-2">
               <AlertTriangle className="h-4 w-4" />
-              Laporan
+              <span className="hidden sm:inline">Laporan</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="gap-2">
               <Users className="h-4 w-4" />
-              Pengguna
+              <span className="hidden sm:inline">Pengguna</span>
             </TabsTrigger>
             <TabsTrigger value="items" className="gap-2">
               <Package className="h-4 w-4" />
-              Barang
+              <span className="hidden sm:inline">Barang</span>
+            </TabsTrigger>
+            <TabsTrigger value="admins" className="gap-2">
+              <Crown className="h-4 w-4" />
+              <span className="hidden sm:inline">Admin</span>
             </TabsTrigger>
           </TabsList>
 
@@ -567,6 +676,74 @@ export default function Admin() {
               </div>
             </div>
           </TabsContent>
+
+          {/* Admins Tab */}
+          <TabsContent value="admins">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="font-semibold">Daftar Admin</h3>
+                <Button onClick={() => setShowAddAdmin(true)} size="sm">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Tambah Admin
+                </Button>
+              </div>
+
+              <div className="grid gap-4">
+                {admins.map((adminRole) => (
+                  <Card key={adminRole.id} className="p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          {adminRole.profiles?.profile_photo_url ? (
+                            <img
+                              src={adminRole.profiles.profile_photo_url}
+                              alt={adminRole.profiles?.username}
+                              className="w-full h-full rounded-full object-cover"
+                            />
+                          ) : (
+                            <Crown className="h-5 w-5 text-primary" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium">{adminRole.profiles?.username || 'Unknown'}</p>
+                          <p className="text-sm text-muted-foreground">{adminRole.profiles?.full_name}</p>
+                        </div>
+                        <Badge className="bg-primary/20 text-primary">Admin</Badge>
+                      </div>
+                      {adminRole.user_id !== user?.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveAdmin(adminRole.id, adminRole.user_id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              <div className="border-t pt-4 mt-6">
+                <h4 className="font-medium mb-3">Jadikan User Sebagai Admin</h4>
+                <div className="grid gap-2">
+                  {users.slice(0, 5).filter(u => !admins.some(a => a.user_id === u.id)).map((profile) => (
+                    <div key={profile.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">@{profile.username}</span>
+                        <span className="text-sm text-muted-foreground">{profile.full_name}</span>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => handleMakeAdmin(profile.id)}>
+                        <Shield className="h-4 w-4 mr-1" />
+                        Jadikan Admin
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
       </main>
 
@@ -692,6 +869,61 @@ export default function Admin() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Admin Dialog */}
+      <Dialog open={showAddAdmin} onOpenChange={setShowAddAdmin}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tambah Admin Baru</DialogTitle>
+            <DialogDescription>
+              Buat akun admin baru dengan email dan password
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                type="email"
+                value={newAdminEmail}
+                onChange={(e) => setNewAdminEmail(e.target.value)}
+                placeholder="admin@example.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Password</label>
+              <Input
+                type="password"
+                value={newAdminPassword}
+                onChange={(e) => setNewAdminPassword(e.target.value)}
+                placeholder="Minimal 8 karakter"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowAddAdmin(false)}
+                className="flex-1"
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleAddAdmin}
+                disabled={!newAdminEmail || !newAdminPassword || processingAdmin}
+                className="flex-1"
+              >
+                {processingAdmin ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Buat Admin'
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

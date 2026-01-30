@@ -7,11 +7,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, LogOut, Plus, Edit, MapPin, Camera, Save, Trash2, Shield } from 'lucide-react';
+import { ArrowLeft, LogOut, Plus, Edit, MapPin, Camera, Save, Trash2, Shield, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { MobileLayout } from '@/components/MobileLayout';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { LocationSelector } from '@/components/LocationSelector';
+import { useSubscription } from '@/hooks/useSubscription';
+import { SubscriptionBadge } from '@/components/SubscriptionBadge';
 
 export default function Profile() {
   const { user, signOut } = useAuth();
@@ -21,6 +23,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [editingProfile, setEditingProfile] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { tier, limits, usage, subscription } = useSubscription();
   const [editForm, setEditForm] = useState({
     username: '',
     full_name: '',
@@ -223,6 +226,7 @@ export default function Profile() {
                 <div className="flex-1 text-center sm:text-left">
                   <div className="flex flex-col sm:flex-row items-center gap-2 mb-2">
                     <h2 className="text-xl sm:text-2xl font-bold">{profile?.username}</h2>
+                    <SubscriptionBadge tier={tier} />
                     {profile?.verified && (
                       <Badge className="bg-accent text-accent-foreground">Verified</Badge>
                     )}
@@ -260,11 +264,68 @@ export default function Profile() {
                         Admin Panel
                       </Button>
                     )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate('/pricing')}
+                      className="gap-2"
+                    >
+                      <Crown className="h-4 w-4" />
+                      {tier === 'free' ? 'Upgrade' : 'Kelola Plan'}
+                    </Button>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Subscription Stats */}
+          {tier !== 'free' && subscription?.expires_at && (
+            <Card className="mb-6">
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Plan Aktif</p>
+                    <p className="font-bold">Bartr {tier.charAt(0).toUpperCase() + tier.slice(1)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground">Berakhir</p>
+                    <p className="font-medium">
+                      {new Date(subscription.expires_at).toLocaleDateString('id-ID')}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Usage Stats for Free Users */}
+          {tier === 'free' && (
+            <Card className="mb-6 border-primary/20">
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-medium">Penggunaan Hari Ini</p>
+                  <Button size="sm" variant="outline" onClick={() => navigate('/pricing')}>
+                    Upgrade
+                  </Button>
+                </div>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-2xl font-bold">{usage.swipe_count}/{limits.daily_swipes}</p>
+                    <p className="text-xs text-muted-foreground">Swipe</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{usage.proposal_count}/{limits.daily_proposals}</p>
+                    <p className="text-xs text-muted-foreground">Proposal</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{items.filter(i => i.is_active).length}/{limits.active_items}</p>
+                    <p className="text-xs text-muted-foreground">Item Aktif</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Items Section */}
           <div className="flex items-center justify-between mb-4">
