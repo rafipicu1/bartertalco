@@ -160,24 +160,67 @@ export function BarterTypeDialog({ isOpen, onClose, onConfirm, myItem, targetIte
         {/* Tuker tambah options */}
         {selectedType === 'tuker_tambah' && (
           <div className="space-y-4">
-            <div className="flex gap-2">
-              <Button
-                variant={topUpDirection === 'pay' ? 'default' : 'outline'}
-                className="flex-1"
-                onClick={() => setTopUpDirection('pay')}
-              >
-                <Minus className="mr-2 h-4 w-4" />
-                Saya Tambah
-              </Button>
-              <Button
-                variant={topUpDirection === 'receive' ? 'default' : 'outline'}
-                className="flex-1"
-                onClick={() => setTopUpDirection('receive')}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Minta Tambahan
-              </Button>
+            {/* Info box explaining the direction */}
+            <div className={`p-3 rounded-lg text-sm ${
+              valueDifference > 0 
+                ? 'bg-amber-500/10 border border-amber-500/20' 
+                : valueDifference < 0 
+                  ? 'bg-green-500/10 border border-green-500/20'
+                  : 'bg-blue-500/10 border border-blue-500/20'
+            }`}>
+              {valueDifference > 0 ? (
+                <p className="text-amber-700 dark:text-amber-300">
+                  <strong>Barangmu lebih murah</strong> — kamu perlu menambah uang untuk tukar tambah.
+                </p>
+              ) : valueDifference < 0 ? (
+                <p className="text-green-700 dark:text-green-300">
+                  <strong>Barangmu lebih mahal</strong> — kamu bisa minta tambahan uang dari pihak lain.
+                </p>
+              ) : (
+                <p className="text-blue-700 dark:text-blue-300">
+                  <strong>Nilai seimbang</strong> — kamu bisa negosiasi tambahan atau barter langsung saja.
+                </p>
+              )}
             </div>
+
+            {/* Only show direction toggle if values are equal (allow flexibility) */}
+            {valueDifference === 0 && (
+              <div className="flex gap-2">
+                <Button
+                  variant={topUpDirection === 'pay' ? 'default' : 'outline'}
+                  className="flex-1"
+                  onClick={() => setTopUpDirection('pay')}
+                >
+                  <Minus className="mr-2 h-4 w-4" />
+                  Saya Tambah
+                </Button>
+                <Button
+                  variant={topUpDirection === 'receive' ? 'default' : 'outline'}
+                  className="flex-1"
+                  onClick={() => setTopUpDirection('receive')}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Minta Tambahan
+                </Button>
+              </div>
+            )}
+
+            {/* Show the locked direction when there's a value difference */}
+            {valueDifference !== 0 && (
+              <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                {valueDifference > 0 ? (
+                  <>
+                    <Minus className="h-4 w-4 text-amber-600" />
+                    <span className="text-sm font-medium">Kamu akan menambah uang</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium">Kamu akan minta tambahan</span>
+                  </>
+                )}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>
@@ -198,7 +241,7 @@ export function BarterTypeDialog({ isOpen, onClose, onConfirm, myItem, targetIte
               </div>
               {suggestedTopUp > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Selisih harga: {formatPrice(suggestedTopUp)}
+                  Rekomendasi selisih harga: {formatPrice(suggestedTopUp)}
                 </p>
               )}
             </div>
