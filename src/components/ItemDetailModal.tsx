@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { MapPin, TrendingUp, User, MessageCircle, ArrowUpDown, Navigation } from "lucide-react";
+import { MapPin, TrendingUp, User, MessageCircle, ArrowUpDown, Navigation, Flag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { calculateDistance, formatDistance } from "@/lib/geolocation";
 import { toast } from "sonner";
 import { ItemSelectionDialog } from "@/components/ItemSelectionDialog";
+import { ReportDialog } from "@/components/ReportDialog";
 
 interface ItemDetailModalProps {
   item: {
@@ -50,6 +51,7 @@ export const ItemDetailModal = ({ item, isOpen, onClose }: ItemDetailModalProps)
   const [distance, setDistance] = useState<string | null>(null);
   const [contacting, setContacting] = useState(false);
   const [showItemSelection, setShowItemSelection] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   useEffect(() => {
     const getDistance = async () => {
@@ -247,9 +249,22 @@ Bisa COD kan? Gimana menurutmu?`;
               )}
             </div>
 
-            <div className="flex items-center gap-2 border-t pt-4">
-              <User className="h-5 w-5 text-muted-foreground" />
-              <span className="font-medium">{item.profiles?.username || 'User'}</span>
+            <div className="flex items-center justify-between border-t pt-4">
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-muted-foreground" />
+                <span className="font-medium">{item.profiles?.username || 'User'}</span>
+              </div>
+              {user && user.id !== item.user_id && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => setShowReportDialog(true)}
+                >
+                  <Flag className="h-4 w-4 mr-1" />
+                  Laporkan
+                </Button>
+              )}
             </div>
 
             <div className="flex gap-2 pt-4">
@@ -261,7 +276,7 @@ Bisa COD kan? Gimana menurutmu?`;
                 variant="outline" 
                 className="flex-1" 
                 onClick={handleContact}
-                disabled={contacting}
+                disabled={contacting || user?.id === item.user_id}
               >
                 <MessageCircle className="mr-2 h-4 w-4" />
                 {contacting ? 'Membuka...' : 'Hubungi'}
@@ -277,6 +292,14 @@ Bisa COD kan? Gimana menurutmu?`;
       onClose={() => setShowItemSelection(false)}
       onItemSelected={handleItemSelected}
       targetItem={item}
+    />
+
+    <ReportDialog
+      isOpen={showReportDialog}
+      onClose={() => setShowReportDialog(false)}
+      reportType="item"
+      reportedItemId={item.id}
+      reportedUserId={item.user_id}
     />
     </>
   );

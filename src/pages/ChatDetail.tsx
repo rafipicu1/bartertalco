@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Send, User, MapPin, TrendingUp } from "lucide-react";
+import { ArrowLeft, Send, User, MapPin, Flag, MoreVertical } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
 import { toast } from "sonner";
@@ -15,6 +15,13 @@ import { BarterProposalCard } from "@/components/chat/BarterProposalCard";
 import { ItemProposalSelector } from "@/components/chat/ItemProposalSelector";
 import { ItemDetailModal } from "@/components/ItemDetailModal";
 import { MobileLayout } from "@/components/MobileLayout";
+import { ReportDialog } from "@/components/ReportDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Message {
   id: string;
@@ -75,6 +82,7 @@ export default function ChatDetail() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [selectedItemForDetail, setSelectedItemForDetail] = useState<any>(null);
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get initial item data from navigation state
@@ -365,26 +373,42 @@ export default function ChatDetail() {
     <MobileLayout showBottomNav={false}>
       <div className="min-h-screen bg-background flex flex-col">
         <header className="border-b bg-card sticky top-0 z-10 shadow-sm">
-          <div className="container mx-auto px-4 py-3 flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/chat')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <Avatar className="h-10 w-10">
-              {conversation?.other_user?.profile_photo_url ? (
-                <img
-                  src={conversation.other_user.profile_photo_url}
-                  alt={conversation.other_user.username}
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                  <User className="h-5 w-5 text-white" />
-                </div>
-              )}
-            </Avatar>
-            <h1 className="text-lg font-bold">
-              {conversation?.other_user?.username || 'User'}
-            </h1>
+          <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/chat')}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <Avatar className="h-10 w-10">
+                {conversation?.other_user?.profile_photo_url ? (
+                  <img
+                    src={conversation.other_user.profile_photo_url}
+                    alt={conversation.other_user.username}
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                    <User className="h-5 w-5 text-primary-foreground" />
+                  </div>
+                )}
+              </Avatar>
+              <h1 className="text-lg font-bold">
+                {conversation?.other_user?.username || 'User'}
+              </h1>
+            </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="text-destructive">
+                  <Flag className="h-4 w-4 mr-2" />
+                  Laporkan Percakapan
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
@@ -542,6 +566,14 @@ export default function ChatDetail() {
             onClose={() => setSelectedItemForDetail(null)}
           />
         )}
+
+        <ReportDialog
+          isOpen={showReportDialog}
+          onClose={() => setShowReportDialog(false)}
+          reportType="conversation"
+          reportedConversationId={conversationId}
+          reportedUserId={conversation?.user1_id === user?.id ? conversation?.user2_id : conversation?.user1_id}
+        />
       </div>
     </MobileLayout>
   );

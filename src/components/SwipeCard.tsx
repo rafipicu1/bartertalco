@@ -16,6 +16,8 @@ interface SwipeCardProps {
     category: string;
     condition: string;
     location: string;
+    city?: string | null;
+    district?: string | null;
     latitude: number | null;
     longitude: number | null;
   };
@@ -133,7 +135,7 @@ export function SwipeCard({ item, onSwipe, style, isLiked = false }: SwipeCardPr
                 <h3 className="text-2xl font-bold mb-1">{item.name}</h3>
                 <div className="flex items-center gap-1 text-sm opacity-90">
                   <MapPin className="h-4 w-4" />
-                  <span>{item.location}</span>
+                  <span>{item.city || item.location}</span>
                   {distance && (
                     <>
                       <span className="mx-1">•</span>
@@ -149,10 +151,7 @@ export function SwipeCard({ item, onSwipe, style, isLiked = false }: SwipeCardPr
               </Badge>
             </div>
             <div className="flex gap-2">
-              <Badge variant="secondary" className="text-xs">
-                {item.category}
-              </Badge>
-              <Badge variant="outline" className="text-xs bg-white/20 text-white border-white/40">
+              <Badge variant="outline" className="text-xs bg-background/20 text-foreground border-foreground/40">
                 {CONDITION_LABELS[item.condition] || item.condition}
               </Badge>
             </div>

@@ -294,6 +294,72 @@ export type Database = {
         }
         Relationships: []
       }
+      reports: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          description: string | null
+          id: string
+          reason: Database["public"]["Enums"]["report_reason"]
+          report_type: Database["public"]["Enums"]["report_type"]
+          reported_conversation_id: string | null
+          reported_item_id: string | null
+          reported_user_id: string | null
+          reporter_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["report_status"]
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          reason: Database["public"]["Enums"]["report_reason"]
+          report_type: Database["public"]["Enums"]["report_type"]
+          reported_conversation_id?: string | null
+          reported_item_id?: string | null
+          reported_user_id?: string | null
+          reporter_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          reason?: Database["public"]["Enums"]["report_reason"]
+          report_type?: Database["public"]["Enums"]["report_type"]
+          reported_conversation_id?: string | null
+          reported_item_id?: string | null
+          reported_user_id?: string | null
+          reporter_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_reported_conversation_id_fkey"
+            columns: ["reported_conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_reported_item_id_fkey"
+            columns: ["reported_item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       swipes: {
         Row: {
           created_at: string | null
@@ -343,6 +409,74 @@ export type Database = {
           },
         ]
       }
+      user_bans: {
+        Row: {
+          ban_type: Database["public"]["Enums"]["ban_type"]
+          banned_by: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          ban_type: Database["public"]["Enums"]["ban_type"]
+          banned_by: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          reason: string
+          user_id: string
+        }
+        Update: {
+          ban_type?: Database["public"]["Enums"]["ban_type"]
+          banned_by?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          reason?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_item_views: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          last_viewed_at: string
+          user_id: string
+          view_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          last_viewed_at?: string
+          user_id: string
+          view_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          last_viewed_at?: string
+          user_id?: string
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_item_views_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -360,6 +494,33 @@ export type Database = {
           created_at?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_search_history: {
+        Row: {
+          created_at: string
+          id: string
+          last_searched_at: string
+          search_count: number | null
+          search_query: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_searched_at?: string
+          search_count?: number | null
+          search_query: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_searched_at?: string
+          search_count?: number | null
+          search_query?: string
           user_id?: string
         }
         Relationships: []
@@ -423,6 +584,13 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: undefined
       }
+      get_personalized_feed: {
+        Args: { p_limit?: number; p_offset?: number; p_user_id: string }
+        Returns: {
+          item_id: string
+          relevance_score: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -444,6 +612,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      ban_type: "warning" | "temporary" | "permanent"
       item_category:
         | "electronics"
         | "fashion"
@@ -466,6 +635,14 @@ export type Database = {
         | "mainan_anak"
         | "kantor_industri"
       item_condition: "new" | "like_new" | "good" | "fair" | "worn"
+      report_reason:
+        | "scam"
+        | "fake_item"
+        | "inappropriate_behavior"
+        | "spam"
+        | "other"
+      report_status: "pending" | "reviewed" | "action_taken" | "dismissed"
+      report_type: "user" | "item" | "conversation"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -594,6 +771,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      ban_type: ["warning", "temporary", "permanent"],
       item_category: [
         "electronics",
         "fashion",
@@ -617,6 +795,15 @@ export const Constants = {
         "kantor_industri",
       ],
       item_condition: ["new", "like_new", "good", "fair", "worn"],
+      report_reason: [
+        "scam",
+        "fake_item",
+        "inappropriate_behavior",
+        "spam",
+        "other",
+      ],
+      report_status: ["pending", "reviewed", "action_taken", "dismissed"],
+      report_type: ["user", "item", "conversation"],
     },
   },
 } as const

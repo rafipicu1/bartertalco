@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MapPin, Tag, TrendingUp, Heart, User, Navigation, Search, Sparkles, Zap, MessageCircle } from "lucide-react";
+import { MapPin, User, Search, Sparkles, Heart, Tag, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ItemDetailModal } from "@/components/ItemDetailModal";
-import { calculateDistance, formatDistance } from "@/lib/geolocation";
 import { MobileLayout } from "@/components/MobileLayout";
 import { Pagination } from "@/components/Pagination";
+import { usePersonalizedFeed } from "@/hooks/usePersonalizedFeed";
 
 interface Item {
   id: string;
@@ -26,6 +26,9 @@ interface Item {
   top_up_value: number;
   condition: string;
   location: string;
+  city?: string | null;
+  district?: string | null;
+  province?: string | null;
   latitude: number | null;
   longitude: number | null;
   created_at: string;
@@ -37,54 +40,43 @@ interface Item {
   };
 }
 
-const CATEGORIES = [
-  { value: 'all', label: 'Semua', icon: '🏪' },
-  { value: 'elektronik', label: 'Elektronik', icon: '📱' },
-  { value: 'fashion', label: 'Fashion', icon: '👕' },
-  { value: 'kendaraan', label: 'Kendaraan', icon: '🚗' },
-  { value: 'properti', label: 'Properti', icon: '🏠' },
-  { value: 'hobi_koleksi', label: 'Hobi', icon: '🎨' },
-  { value: 'olahraga', label: 'Olahraga', icon: '⚽' },
-  { value: 'musik', label: 'Musik', icon: '🎸' },
-  { value: 'gaming', label: 'Gaming', icon: '🎮' },
-  { value: 'perlengkapan_rumah', label: 'Rumah', icon: '🛋️' },
-];
+const CONDITION_LABELS: Record<string, string> = {
+  new: 'Baru',
+  like_new: 'Seperti Baru',
+  good: 'Baik',
+  fair: 'Cukup Baik',
+  worn: 'Bekas Pakai',
+};
 
 const ITEMS_PER_PAGE = 12;
 
 const Index = () => {
-  const [items, setItems] = useState<Item[]>([]);
+  const [allItems, setAllItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { items: personalizedItems, trackItemView, trackSearch } = usePersonalizedFeed(100, 0);
 
   useEffect(() => {
     fetchItems();
-    getUserLocation();
   }, []);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, searchQuery]);
+  }, [searchQuery]);
 
-  const getUserLocation = async () => {
-    if (user) {
-      const { data } = await supabase
-        .from('profiles')
-        .select('latitude, longitude')
-        .eq('id', user.id)
-        .single();
-      
-      if (data?.latitude && data?.longitude) {
-        setUserLocation({ lat: data.latitude, lon: data.longitude });
-      }
+  // Debounce search tracking
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const timer = setTimeout(() => {
+        trackSearch(searchQuery);
+      }, 1000);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [searchQuery]);
 
   const fetchItems = async () => {
     try {
@@ -103,23 +95,12 @@ const Index = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setItems(data || []);
+      setAllItems(data || []);
     } catch (error) {
       console.error('Error fetching items:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const getDistance = (item: Item) => {
-    if (!userLocation || !item.latitude || !item.longitude) return null;
-    const distance = calculateDistance(
-      userLocation.lat,
-      userLocation.lon,
-      item.latitude,
-      item.longitude
-    );
-    return formatDistance(distance);
   };
 
   const formatPrice = (value: number) => {
@@ -131,12 +112,16 @@ const Index = () => {
     }).format(value);
   };
 
-  const filteredItems = items.filter(item => {
-    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-    const matchesSearch = searchQuery === '' || 
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+  // Use personalized feed if available, otherwise use all items
+  const displayItems = user && personalizedItems.length > 0 ? personalizedItems : allItems;
+
+  // Filter by search only (no category filter)
+  const filteredItems = displayItems.filter(item => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return item.name.toLowerCase().includes(query) ||
+      item.description.toLowerCase().includes(query) ||
+      item.barter_preference.toLowerCase().includes(query);
   });
 
   const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
@@ -144,6 +129,11 @@ const Index = () => {
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
+
+  const handleItemClick = (item: Item) => {
+    trackItemView(item.id);
+    setSelectedItem(item);
+  };
 
   if (loading) {
     return (
@@ -169,10 +159,10 @@ const Index = () => {
               {[...Array(8)].map((_, i) => (
                 <Card key={i}>
                   <Skeleton className="aspect-square w-full rounded-t-lg" />
-                  <CardHeader className="p-3">
+                  <div className="p-3 space-y-2">
                     <Skeleton className="h-4 w-3/4" />
                     <Skeleton className="h-3 w-1/2" />
-                  </CardHeader>
+                  </div>
                 </Card>
               ))}
             </div>
@@ -234,7 +224,7 @@ const Index = () => {
             <div className="max-w-3xl mx-auto text-center space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full text-xs font-medium text-primary">
                 <Sparkles className="h-3 w-3" />
-                Platform BARTR Terpercaya
+                {user ? 'Rekomendasi untukmu' : 'Platform BARTR Terpercaya'}
               </div>
               <h2 className="text-2xl md:text-4xl font-bold leading-tight">
                 Tukar Barangmu <span className="text-primary">Mudah & Cepat</span>
@@ -246,7 +236,7 @@ const Index = () => {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="text"
-                    placeholder="Cari barang..."
+                    placeholder="Cari barang yang kamu mau..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10 pr-4 py-5 rounded-xl border-2 focus:border-primary"
@@ -257,7 +247,7 @@ const Index = () => {
               {/* Stats - compact */}
               <div className="flex justify-center gap-6 pt-4">
                 <div className="text-center">
-                  <div className="text-xl md:text-2xl font-bold text-primary">{items.length}+</div>
+                  <div className="text-xl md:text-2xl font-bold text-primary">{allItems.length}+</div>
                   <div className="text-xs text-muted-foreground">Barang</div>
                 </div>
                 <div className="text-center">
@@ -274,28 +264,10 @@ const Index = () => {
         </section>
 
         <main className="container mx-auto px-4 py-4 md:py-8">
-          {/* Category Filter - horizontal scroll */}
-          <div className="mb-4 md:mb-8">
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {CATEGORIES.map((category) => (
-                <Button
-                  key={category.value}
-                  variant={selectedCategory === category.value ? "default" : "outline"}
-                  onClick={() => setSelectedCategory(category.value)}
-                  className="whitespace-nowrap flex items-center gap-1.5 min-w-fit flex-shrink-0 rounded-full text-sm h-9 px-4"
-                  size="sm"
-                >
-                  <span>{category.icon}</span>
-                  <span>{category.label}</span>
-                </Button>
-              ))}
-            </div>
-          </div>
-
           {/* Items Header */}
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-bold">
-              {selectedCategory === 'all' ? 'Semua Barang' : CATEGORIES.find(c => c.value === selectedCategory)?.label}
+              {user ? '✨ Untukmu' : 'Temukan Barang'}
             </h3>
             <p className="text-sm text-muted-foreground">
               {filteredItems.length} barang
@@ -304,7 +276,9 @@ const Index = () => {
 
           {filteredItems.length === 0 ? (
             <div className="text-center py-16">
-              <p className="text-lg text-muted-foreground mb-4">Belum ada barang tersedia</p>
+              <p className="text-lg text-muted-foreground mb-4">
+                {searchQuery ? 'Tidak ada barang yang cocok' : 'Belum ada barang tersedia'}
+              </p>
               <Button onClick={() => navigate('/upload')}>Pasang Barang Pertama</Button>
             </div>
           ) : (
@@ -315,7 +289,7 @@ const Index = () => {
                   <Card 
                     key={item.id} 
                     className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group border hover:border-primary/50"
-                    onClick={() => setSelectedItem(item)}
+                    onClick={() => handleItemClick(item)}
                   >
                     <div className="relative aspect-square overflow-hidden bg-muted">
                       <img
@@ -324,10 +298,6 @@ const Index = () => {
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      
-                      <Badge className="absolute top-2 right-2 bg-primary/90 text-primary-foreground text-[10px] px-1.5 py-0.5">
-                        {item.category}
-                      </Badge>
                     </div>
 
                     <CardContent className="p-2 md:p-3 space-y-1">
@@ -335,7 +305,7 @@ const Index = () => {
                       
                       <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                         <MapPin className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate">{item.location?.split(' — ')[0]}</span>
+                        <span className="truncate">{item.city || item.location?.split(' — ')[0]}</span>
                       </div>
 
                       <div className="bg-primary/5 p-2 rounded-md">
@@ -347,14 +317,14 @@ const Index = () => {
                       <div className="flex items-center justify-between pt-1">
                         <div className="flex items-center gap-1">
                           <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                            <User className="h-3 w-3 text-white" />
+                            <User className="h-3 w-3 text-primary-foreground" />
                           </div>
                           <span className="text-[10px] truncate max-w-[60px]">
                             {item.profiles?.username}
                           </span>
                         </div>
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          {item.condition}
+                          {CONDITION_LABELS[item.condition] || item.condition}
                         </Badge>
                       </div>
                     </CardContent>

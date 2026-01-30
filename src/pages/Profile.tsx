@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, LogOut, Plus, Edit, MapPin, Camera, Save, X, Trash2 } from 'lucide-react';
+import { ArrowLeft, LogOut, Plus, Edit, MapPin, Camera, Save, Trash2, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { MobileLayout } from '@/components/MobileLayout';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -20,7 +20,7 @@ export default function Profile() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingProfile, setEditingProfile] = useState(false);
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [editForm, setEditForm] = useState({
     username: '',
     full_name: '',
@@ -33,7 +33,21 @@ export default function Profile() {
   useEffect(() => {
     loadProfile();
     loadItems();
+    checkAdminStatus();
   }, [user]);
+
+  const checkAdminStatus = async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
+    
+    setIsAdmin(!!data);
+  };
 
   const loadProfile = async () => {
     if (!user) return;
@@ -225,15 +239,28 @@ export default function Profile() {
                   {profile?.bio && (
                     <p className="text-sm mb-3">{profile.bio}</p>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditingProfile(true)}
-                    className="gap-2"
-                  >
-                    <Edit className="h-4 w-4" />
-                    Edit Profil
-                  </Button>
+                  <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditingProfile(true)}
+                      className="gap-2"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Edit Profil
+                    </Button>
+                    {isAdmin && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate('/admin')}
+                        className="gap-2"
+                      >
+                        <Shield className="h-4 w-4" />
+                        Admin Panel
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>

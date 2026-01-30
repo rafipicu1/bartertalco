@@ -75,6 +75,19 @@ export default function Swipe() {
       
       setLikedItemIds(new Set(likedItems?.map(s => s.item_id) || []));
 
+      // Try to get personalized feed first
+      const { data: feedData } = await supabase
+        .rpc('get_personalized_feed', {
+          p_user_id: user.id,
+          p_limit: 50,
+          p_offset: 0
+        });
+
+      let itemIds: string[] = [];
+      if (feedData && feedData.length > 0) {
+        itemIds = feedData.map((f: any) => f.item_id);
+      }
+
       let query = supabase
         .from('items')
         .select(`
@@ -85,8 +98,12 @@ export default function Swipe() {
           )
         `)
         .eq('is_active', true)
-        .neq('user_id', user.id)
-        .eq('category', selectedUserItem.category); // Filter by same category
+        .neq('user_id', user.id);
+
+      // If we have personalized items, use those
+      if (itemIds.length > 0) {
+        query = query.in('id', itemIds);
+      }
 
       // Only filter out swiped items if there are any
       if (swipedIds.length > 0) {
@@ -281,7 +298,7 @@ export default function Swipe() {
             </div>
             {selectedUserItem && (
               <p className="text-xs text-muted-foreground mt-2 text-center">
-                Cari barang kategori <span className="font-semibold">{selectedUserItem.category}</span> untuk ditukar
+                Rekomendasi barang untukmu ✨
               </p>
             )}
           </div>
@@ -303,11 +320,11 @@ export default function Swipe() {
             </div>
             <h2 className="text-2xl font-bold">Tidak ada barang lagi!</h2>
             <p className="text-muted-foreground max-w-sm">
-              Kamu sudah melihat semua barang kategori <span className="font-semibold">{selectedUserItem?.category}</span> yang tersedia.
+              Kamu sudah melihat semua barang yang tersedia. Coba lagi nanti!
             </p>
             <Button
               onClick={loadItems}
-              className="bg-gradient-primary text-white"
+              className="bg-gradient-to-r from-primary to-primary/80"
             >
               Muat Ulang
             </Button>
