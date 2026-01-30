@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { LocationSelector } from '@/components/LocationSelector';
 import { toast } from 'sonner';
 import { ArrowLeft, Upload as UploadIcon, X } from 'lucide-react';
+import { useSubscription } from '@/hooks/useSubscription';
+import { UpgradeModal } from '@/components/UpgradeModal';
 
 const CATEGORIES = [
   { value: 'elektronik', label: 'Elektronik' },
@@ -42,6 +44,12 @@ export default function Upload() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [currentItemCount, setCurrentItemCount] = useState(0);
+  const [limitReached, setLimitReached] = useState(false);
+  
+  const { limits, canUploadItem } = useSubscription();
+  
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -56,12 +64,33 @@ export default function Upload() {
     district: '',
   });
 
-  // Load user's saved location as default
+  // Check upload limit on mount
   useEffect(() => {
     if (user) {
       loadUserLocation();
+      checkUploadLimit();
     }
   }, [user]);
+
+  const checkUploadLimit = async () => {
+    if (!user) return;
+    
+    const canUpload = await canUploadItem();
+    
+    // Get current item count
+    const { data } = await supabase
+      .from('items')
+      .select('id', { count: 'exact' })
+      .eq('user_id', user.id)
+      .eq('is_active', true);
+    
+    setCurrentItemCount(data?.length || 0);
+    
+    if (!canUpload) {
+      setLimitReached(true);
+      setShowUpgradeModal(true);
+    }
+  };
 
   const loadUserLocation = async () => {
     if (!user) return;
@@ -369,6 +398,20 @@ export default function Upload() {
           </CardContent>
         </Card>
       </main>
+
+      <UpgradeModal
+        open={showUpgradeModal}
+        onOpenChange={(open) => {
+          setShowUpgradeModal(open);
+          // If they close without upgrading/paying and limit is reached, go back
+          if (!open && limitReached) {
+            navigate(-1);
+          }
+        }}
+        limitType="upload"
+        currentCount={currentItemCount}
+        maxCount={limits.active_items}
+      />
     </div>
   );
 }

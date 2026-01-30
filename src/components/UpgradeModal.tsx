@@ -78,8 +78,8 @@ const limitMessages: Record<string, { title: string; message: string }> = {
     message: 'Kamu sudah mencapai limit barter proposal hari ini.',
   },
   upload: {
-    title: 'Limit Item Tercapai!',
-    message: 'Akun gratis hanya bisa 1 item aktif. Upgrade atau bayar per post!',
+    title: 'Limit Item Tercapai! 📦',
+    message: 'Kamu sudah mencapai batas item aktif. Pilih upgrade atau bayar per posting!',
   },
   wishlist: {
     title: 'Wishlist Penuh!',
@@ -241,18 +241,23 @@ export function UpgradeModal({
         </div>
 
         {limitType === 'upload' && (
-          <div className="border-t pt-4">
-            <p className="text-sm text-muted-foreground mb-3">
-              Atau bayar sekali untuk upload 1 item tambahan:
-            </p>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleSinglePost}
-              disabled={loading !== null}
-            >
-              {loading === 'single_post' ? 'Memproses...' : 'Bayar Rp5.000 (sekali upload)'}
-            </Button>
+          <div className="border-t pt-4 mt-2">
+            <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
+              <p className="text-sm font-medium mb-2">
+                💡 Mau posting 1 barang aja?
+              </p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Bayar sekali pakai Rp3.000 untuk upload 1 item tambahan tanpa perlu upgrade.
+              </p>
+              <Button
+                variant="outline"
+                className="w-full border-green-500/50 hover:bg-green-500/10"
+                onClick={handleSinglePost}
+                disabled={loading !== null}
+              >
+                {loading === 'single_post' ? 'Memproses...' : 'Bayar Rp3.000 (1x Posting)'}
+              </Button>
+            </div>
           </div>
         )}
 
