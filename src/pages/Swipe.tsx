@@ -194,37 +194,85 @@ export default function Swipe() {
         if (error && error.code !== '23505') throw error;
 
         if (direction === 'right') {
-          // Check if there's a match between these specific items
-          const { data: match } = await supabase
-            .from('matches')
-            .select('*')
-            .or(`item1_id.eq.${selectedUserItem.id},item2_id.eq.${selectedUserItem.id}`)
-            .or(`item1_id.eq.${currentItem.id},item2_id.eq.${currentItem.id}`)
-            .maybeSingle();
+          // Check if there's a mutual like (the other person also liked our item)
+          const itemOwnerId = currentItem.user_id || currentItem.profiles?.user_id;
+          
+          if (itemOwnerId) {
+            // Check if the other person has swiped right on our item
+            const { data: mutualSwipe } = await supabase
+              .from('swipes')
+              .select('*')
+              .eq('swiper_id', itemOwnerId)
+              .eq('item_id', selectedUserItem.id)
+              .eq('direction', 'right')
+              .maybeSingle();
 
-          if (match) {
-            // Create conversation automatically
-            const itemOwnerId = currentItem.user_id || currentItem.profiles?.user_id;
-            
-            if (itemOwnerId) {
-              const { data: convo } = await supabase
+            if (mutualSwipe) {
+              // It's a match! Create or find conversation
+              const { data: existingConvo } = await supabase
                 .from('conversations')
-                .insert({
-                  user1_id: user.id < itemOwnerId ? user.id : itemOwnerId,
-                  user2_id: user.id < itemOwnerId ? itemOwnerId : user.id,
-                  item1_id: selectedUserItem.id,
-                  item2_id: currentItem.id,
-                })
-                .select()
-                .single();
+                .select('id')
+                .or(`and(user1_id.eq.${user.id},user2_id.eq.${itemOwnerId}),and(user1_id.eq.${itemOwnerId},user2_id.eq.${user.id})`)
+                .maybeSingle();
 
-              toast.success("Cocok! 🎉", {
-                description: `${selectedUserItem.name} match dengan ${currentItem.name}!`,
-                action: convo ? {
-                  label: 'Buka Chat',
-                  onClick: () => navigate(`/chat/${convo.id}`)
-                } : undefined,
-              });
+              let conversationId = existingConvo?.id;
+
+              if (!existingConvo) {
+                const { data: newConvo } = await supabase
+                  .from('conversations')
+                  .insert({
+                    user1_id: user.id < itemOwnerId ? user.id : itemOwnerId,
+                    user2_id: user.id < itemOwnerId ? itemOwnerId : user.id,
+                    item1_id: user.id < itemOwnerId ? selectedUserItem.id : currentItem.id,
+                    item2_id: user.id < itemOwnerId ? currentItem.id : selectedUserItem.id,
+                  })
+                  .select()
+                  .single();
+                
+                conversationId = newConvo?.id;
+              }
+
+              if (conversationId) {
+                // Send match message
+                const formatPrice = (value: number) => {
+                  return new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                    minimumFractionDigits: 0,
+                  }).format(value);
+                };
+
+                const matchMessage = `🎉 **MATCH!** 🎉
+
+Kalian berdua saling suka! 
+
+*${selectedUserItem.name}* (${formatPrice(selectedUserItem.estimated_value)}) ↔️ *${currentItem.name}* (${formatPrice(currentItem.estimated_value)})
+
+Yuk lanjutkan diskusi untuk barter! 👇`;
+
+                await supabase
+                  .from('messages')
+                  .insert({
+                    conversation_id: conversationId,
+                    sender_id: user.id,
+                    content: matchMessage,
+                    message_type: 'match_notification',
+                  });
+
+                // Navigate directly to chat
+                toast.success("🎉 Match! Kalian saling suka!", {
+                  description: 'Membuka chat...',
+                });
+                
+                navigate(`/chat/${conversationId}`, {
+                  state: {
+                    targetItem: currentItem,
+                    myItem: selectedUserItem,
+                    isMatch: true,
+                  }
+                });
+                return; // Don't increment index, we're navigating away
+              }
             }
           }
         }
