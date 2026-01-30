@@ -118,12 +118,15 @@ export function UpgradeModal({
         throw new Error(response.error.message);
       }
 
-      const { snap_token, client_key } = response.data;
+      const { snap_token, client_key, is_production } = response.data;
 
-      // Load Midtrans Snap
+      // Load Midtrans Snap (production or sandbox based on backend config)
       if (!window.snap) {
         const script = document.createElement('script');
-        script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+        const snapUrl = is_production 
+          ? 'https://app.midtrans.com/snap/snap.js'
+          : 'https://app.sandbox.midtrans.com/snap/snap.js';
+        script.src = snapUrl;
         script.setAttribute('data-client-key', client_key);
         document.body.appendChild(script);
         
