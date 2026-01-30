@@ -6,75 +6,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Midtrans configuration
-const MIDTRANS_SERVER_KEY = Deno.env.get('MIDTRANS_SERVER_KEY')
-const MIDTRANS_CLIENT_KEY = Deno.env.get('MIDTRANS_CLIENT_KEY')
-const MIDTRANS_PRODUCTION_RAW = Deno.env.get('MIDTRANS_PRODUCTION') || ''
+// Midtrans configuration - simplified
+const MIDTRANS_SERVER_KEY = Deno.env.get('MIDTRANS_SERVER_KEY') || ''
+const MIDTRANS_CLIENT_KEY = Deno.env.get('MIDTRANS_CLIENT_KEY') || ''
 
-function parseBooleanEnv(raw: string): boolean | null {
-  const v = raw.toLowerCase().trim()
-  if (!v) return null
-  if (v === 'true' || v === '1' || v === 'yes' || v === 'y') return true
-  if (v === 'false' || v === '0' || v === 'no' || v === 'n') return false
-  // If user accidentally pasted a key/string here, treat it as unset and infer from key prefix
-  return null
-}
+// Auto-detect environment from key prefix: SB- = sandbox, otherwise production
+const IS_SANDBOX = MIDTRANS_SERVER_KEY.startsWith('SB-') || MIDTRANS_CLIENT_KEY.startsWith('SB-')
+const IS_PRODUCTION = !IS_SANDBOX
 
-// Midtrans sendiri membedakan sandbox vs production lewat domain + jenis key.
-// Jadi kalau MIDTRANS_PRODUCTION tidak diset, kita infer otomatis:
-// - Key sandbox biasanya prefix "SB-"
-// - Kalau bukan "SB-" kita anggap production
-const productionOverride = parseBooleanEnv(MIDTRANS_PRODUCTION_RAW)
-const inferredProduction = !(MIDTRANS_SERVER_KEY?.startsWith('SB-') || MIDTRANS_CLIENT_KEY?.startsWith('SB-'))
-const IS_PRODUCTION = productionOverride ?? inferredProduction
-
-console.log('Midtrans config check:', {
+console.log('Midtrans config:', {
   hasServerKey: !!MIDTRANS_SERVER_KEY,
   hasClientKey: !!MIDTRANS_CLIENT_KEY,
-  productionRaw: MIDTRANS_PRODUCTION_RAW,
-  productionOverride,
-  inferredProduction,
   isProduction: IS_PRODUCTION,
-  serverKeyPrefix: MIDTRANS_SERVER_KEY?.substring(0, 5) || 'N/A',
-  clientKeyPrefix: MIDTRANS_CLIENT_KEY?.substring(0, 5) || 'N/A',
+  keyPrefix: MIDTRANS_SERVER_KEY?.substring(0, 5) || 'N/A',
 })
 
 function assertMidtransConfig() {
   if (!MIDTRANS_SERVER_KEY) {
-    throw new Error('MIDTRANS_SERVER_KEY is not configured')
+    throw new Error('MIDTRANS_SERVER_KEY belum dikonfigurasi. Tambahkan di Cloud secrets.')
   }
   if (!MIDTRANS_CLIENT_KEY) {
-    throw new Error('MIDTRANS_CLIENT_KEY is not configured')
-  }
-
-  // Heuristic: sandbox keys typically start with SB-
-  const serverLooksSandbox = MIDTRANS_SERVER_KEY.startsWith('SB-')
-  const clientLooksSandbox = MIDTRANS_CLIENT_KEY.startsWith('SB-')
-
-  // If user sets MIDTRANS_PRODUCTION explicitly, validate it matches the key type.
-  if (productionOverride !== null) {
-    if (productionOverride && (serverLooksSandbox || clientLooksSandbox)) {
-      throw new Error(
-        'MIDTRANS_PRODUCTION=true tapi terdeteksi key SANDBOX (SB-...). Ganti ke production keys.'
-      )
-    }
-    if (!productionOverride && (!serverLooksSandbox || !clientLooksSandbox)) {
-      throw new Error(
-        'MIDTRANS_PRODUCTION=false tapi terdeteksi key PRODUCTION. Ganti ke sandbox keys (SB-...) atau set MIDTRANS_PRODUCTION=true.'
-      )
-    }
-  }
-
-  if (IS_PRODUCTION && (serverLooksSandbox || clientLooksSandbox)) {
-    throw new Error(
-      'Midtrans is in PRODUCTION mode but SANDBOX keys were detected (SB-...). Please update MIDTRANS_SERVER_KEY and MIDTRANS_CLIENT_KEY to production keys.'
-    )
-  }
-
-  if (!IS_PRODUCTION && (!serverLooksSandbox || !clientLooksSandbox)) {
-    throw new Error(
-      'Midtrans is in SANDBOX mode but PRODUCTION keys were detected. Either set MIDTRANS_PRODUCTION=true or replace keys with sandbox keys (SB-...).'
-    )
+    throw new Error('MIDTRANS_CLIENT_KEY belum dikonfigurasi. Tambahkan di Cloud secrets.')
   }
 }
 
