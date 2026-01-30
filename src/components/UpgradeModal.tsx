@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,9 +8,10 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Crown, Zap, Sparkles, Check, X } from 'lucide-react';
+import { Crown, Zap, Sparkles, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { loadSnapScript, openSnapPayment, isSnapPopupOpen, resetSnapState } from '@/lib/midtrans';
 
 interface UpgradeModalProps {
   open: boolean;
@@ -18,19 +19,6 @@ interface UpgradeModalProps {
   limitType: 'swipe' | 'proposal' | 'upload' | 'wishlist' | 'general';
   currentCount?: number;
   maxCount?: number;
-}
-
-declare global {
-  interface Window {
-    snap: {
-      pay: (token: string, options: {
-        onSuccess: (result: any) => void;
-        onPending: (result: any) => void;
-        onError: (result: any) => void;
-        onClose: () => void;
-      }) => void;
-    };
-  }
 }
 
 const plans = [
@@ -100,7 +88,19 @@ export function UpgradeModal({
 }: UpgradeModalProps) {
   const [loading, setLoading] = useState<string | null>(null);
 
+  // Reset snap state when modal closes
+  useEffect(() => {
+    if (!open) {
+      resetSnapState();
+    }
+  }, [open]);
+
   const handleUpgrade = async (productType: string) => {
+    // Prevent double clicks
+    if (loading || isSnapPopupOpen()) {
+      return;
+    }
+    
     setLoading(productType);
 
     try {
@@ -120,22 +120,11 @@ export function UpgradeModal({
 
       const { snap_token, client_key, is_production } = response.data;
 
-      // Load Midtrans Snap (production or sandbox based on backend config)
-      if (!window.snap) {
-        const script = document.createElement('script');
-        const snapUrl = is_production 
-          ? 'https://app.midtrans.com/snap/snap.js'
-          : 'https://app.sandbox.midtrans.com/snap/snap.js';
-        script.src = snapUrl;
-        script.setAttribute('data-client-key', client_key);
-        document.body.appendChild(script);
-        
-        await new Promise(resolve => {
-          script.onload = resolve;
-        });
-      }
+      // Load Midtrans Snap
+      await loadSnapScript(client_key, is_production);
 
-      window.snap.pay(snap_token, {
+      // Open payment popup
+      const opened = openSnapPayment(snap_token, {
         onSuccess: (result: any) => {
           console.log('Payment success:', result);
           toast.success('Pembayaran berhasil! 🎉');
@@ -155,6 +144,10 @@ export function UpgradeModal({
           console.log('Payment popup closed');
         },
       });
+      
+      if (!opened) {
+        toast.error('Popup pembayaran sedang terbuka');
+      }
     } catch (error: any) {
       console.error('Payment error:', error);
       toast.error(error.message || 'Terjadi kesalahan');
