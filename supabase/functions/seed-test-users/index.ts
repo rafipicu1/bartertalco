@@ -170,6 +170,7 @@ Deno.serve(async (req) => {
     // Check for create_admin action
     const body = await req.json().catch(() => ({}))
     
+    // Action: Create Admin
     if (body.action === 'create_admin') {
       const { email, password } = body
       
@@ -180,7 +181,6 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Create admin user
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
@@ -206,7 +206,6 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Create profile
       await supabaseAdmin
         .from('profiles')
         .upsert({
@@ -216,7 +215,6 @@ Deno.serve(async (req) => {
           location: 'Jakarta'
         })
 
-      // Assign admin role
       const { error: roleError } = await supabaseAdmin
         .from('user_roles')
         .insert({
@@ -237,6 +235,134 @@ Deno.serve(async (req) => {
           success: true, 
           message: 'Admin created successfully',
           user_id: authData.user.id 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
+    }
+
+    // Action: Create Regular User
+    if (body.action === 'create_user') {
+      const { email, password, username, full_name, location } = body
+      
+      if (!email || !password || !username) {
+        return new Response(
+          JSON.stringify({ error: 'Email, password, and username are required' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        )
+      }
+
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          username,
+          full_name: full_name || username,
+          location: location || 'Indonesia'
+        }
+      })
+
+      if (authError) {
+        return new Response(
+          JSON.stringify({ error: authError.message }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        )
+      }
+
+      if (!authData.user) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to create user' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        )
+      }
+
+      await supabaseAdmin
+        .from('profiles')
+        .upsert({
+          id: authData.user.id,
+          username,
+          full_name: full_name || username,
+          location: location || 'Indonesia'
+        })
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'User created successfully',
+          user_id: authData.user.id 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
+    }
+
+    // Action: Upgrade User Subscription
+    if (body.action === 'upgrade_user') {
+      const { user_id, tier } = body
+      
+      if (!user_id || !tier) {
+        return new Response(
+          JSON.stringify({ error: 'user_id and tier are required' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        )
+      }
+
+      if (!['free', 'plus', 'pro'].includes(tier)) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid tier. Must be free, plus, or pro' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        )
+      }
+
+      // Check if subscription exists
+      const { data: existingSub } = await supabaseAdmin
+        .from('user_subscriptions')
+        .select('id')
+        .eq('user_id', user_id)
+        .single()
+
+      const subscriptionData = {
+        user_id,
+        tier,
+        status: tier === 'free' ? 'expired' : 'active',
+        started_at: new Date().toISOString(),
+        expires_at: tier === 'free' 
+          ? null 
+          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date().toISOString()
+      }
+
+      if (existingSub) {
+        const { error: updateError } = await supabaseAdmin
+          .from('user_subscriptions')
+          .update(subscriptionData)
+          .eq('user_id', user_id)
+
+        if (updateError) {
+          console.error('Error updating subscription:', updateError)
+          return new Response(
+            JSON.stringify({ error: updateError.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+          )
+        }
+      } else {
+        const { error: insertError } = await supabaseAdmin
+          .from('user_subscriptions')
+          .insert(subscriptionData)
+
+        if (insertError) {
+          console.error('Error inserting subscription:', insertError)
+          return new Response(
+            JSON.stringify({ error: insertError.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+          )
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: `User upgraded to ${tier} successfully`,
+          tier 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
