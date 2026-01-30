@@ -7,9 +7,34 @@ const corsHeaders = {
 }
 
 // Midtrans configuration
-const MIDTRANS_SERVER_KEY = Deno.env.get('MIDTRANS_SERVER_KEY')!
-const MIDTRANS_CLIENT_KEY = Deno.env.get('MIDTRANS_CLIENT_KEY')!
+const MIDTRANS_SERVER_KEY = Deno.env.get('MIDTRANS_SERVER_KEY')
+const MIDTRANS_CLIENT_KEY = Deno.env.get('MIDTRANS_CLIENT_KEY')
 const IS_PRODUCTION = Deno.env.get('MIDTRANS_PRODUCTION') === 'true'
+
+function assertMidtransConfig() {
+  if (!MIDTRANS_SERVER_KEY) {
+    throw new Error('MIDTRANS_SERVER_KEY is not configured')
+  }
+  if (!MIDTRANS_CLIENT_KEY) {
+    throw new Error('MIDTRANS_CLIENT_KEY is not configured')
+  }
+
+  // Heuristic: sandbox keys typically start with SB-
+  const serverLooksSandbox = MIDTRANS_SERVER_KEY.startsWith('SB-')
+  const clientLooksSandbox = MIDTRANS_CLIENT_KEY.startsWith('SB-')
+
+  if (IS_PRODUCTION && (serverLooksSandbox || clientLooksSandbox)) {
+    throw new Error(
+      'Midtrans is in PRODUCTION mode but SANDBOX keys were detected (SB-...). Please update MIDTRANS_SERVER_KEY and MIDTRANS_CLIENT_KEY to production keys.'
+    )
+  }
+
+  if (!IS_PRODUCTION && (!serverLooksSandbox || !clientLooksSandbox)) {
+    throw new Error(
+      'Midtrans is in SANDBOX mode but PRODUCTION keys were detected. Either set MIDTRANS_PRODUCTION=true or replace keys with sandbox keys (SB-...).'
+    )
+  }
+}
 
 const MIDTRANS_BASE_URL = IS_PRODUCTION 
   ? 'https://app.midtrans.com/snap/v1'
@@ -35,6 +60,9 @@ serve(async (req) => {
   }
 
   try {
+    // Validate config early so we fail fast with a clear message
+    assertMidtransConfig()
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
