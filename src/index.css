@@ -166,4 +166,16 @@ All colors MUST be HSL.
   .animate-fade-in {
     animation: fade-in 0.5s ease-out;
   }
+
+  /* Prevent horizontal scroll on all pages */
+  html, body, #root {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  /* Ensure all containers don't overflow */
+  .container {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
 }
