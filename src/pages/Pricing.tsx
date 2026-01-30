@@ -8,7 +8,7 @@ import { MobileLayout } from '@/components/MobileLayout';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { loadSnapScript, openSnapPayment, isSnapPopupOpen, resetSnapState } from '@/lib/midtrans';
+import { loadSnapScript, openSnapPayment, resetSnapState } from '@/lib/midtrans';
 
 const plans = [
   {
@@ -78,7 +78,7 @@ export default function Pricing() {
     if (productType === 'free') return;
 
     // Prevent double clicks
-    if (loading || isSnapPopupOpen()) {
+    if (loading) {
       return;
     }
 
@@ -89,6 +89,7 @@ export default function Pricing() {
       if (!session) {
         toast.error('Silakan login terlebih dahulu');
         navigate('/auth');
+        setLoading(null);
         return;
       }
 
@@ -105,8 +106,8 @@ export default function Pricing() {
       // Load Midtrans Snap
       await loadSnapScript(client_key, is_production);
 
-      // Open payment popup
-      const opened = openSnapPayment(snap_token, {
+      // Open payment popup (will auto-hide existing popup first)
+      openSnapPayment(snap_token, {
         onSuccess: (result: any) => {
           console.log('Payment success:', result);
           toast.success('Pembayaran berhasil! 🎉');
@@ -119,19 +120,16 @@ export default function Pricing() {
         onError: (result: any) => {
           console.error('Payment error:', result);
           toast.error('Pembayaran gagal');
+          setLoading(null);
         },
         onClose: () => {
           console.log('Payment popup closed');
+          setLoading(null);
         },
       });
-      
-      if (!opened) {
-        toast.error('Popup pembayaran sedang terbuka');
-      }
     } catch (error: any) {
       console.error('Payment error:', error);
       toast.error(error.message || 'Terjadi kesalahan');
-    } finally {
       setLoading(null);
     }
   };
