@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Crown, Zap, Sparkles, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { loadSnapScript, openSnapPayment, isSnapPopupOpen, resetSnapState } from '@/lib/midtrans';
+import { loadSnapScript, openSnapPayment, resetSnapState } from '@/lib/midtrans';
 
 interface UpgradeModalProps {
   open: boolean;
@@ -88,16 +88,15 @@ export function UpgradeModal({
 }: UpgradeModalProps) {
   const [loading, setLoading] = useState<string | null>(null);
 
-  // Reset snap state when modal closes
+  // Reset snap state when modal opens or closes
   useEffect(() => {
-    if (!open) {
-      resetSnapState();
-    }
+    // Always reset snap state when modal state changes
+    resetSnapState();
   }, [open]);
 
   const handleUpgrade = async (productType: string) => {
     // Prevent double clicks
-    if (loading || isSnapPopupOpen()) {
+    if (loading) {
       return;
     }
     
@@ -107,6 +106,7 @@ export function UpgradeModal({
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error('Silakan login terlebih dahulu');
+        setLoading(null);
         return;
       }
 
@@ -123,8 +123,8 @@ export function UpgradeModal({
       // Load Midtrans Snap
       await loadSnapScript(client_key, is_production);
 
-      // Open payment popup
-      const opened = openSnapPayment(snap_token, {
+      // Open payment popup (will auto-hide existing popup first)
+      openSnapPayment(snap_token, {
         onSuccess: (result: any) => {
           console.log('Payment success:', result);
           toast.success('Pembayaran berhasil! 🎉');
@@ -139,19 +139,16 @@ export function UpgradeModal({
         onError: (result: any) => {
           console.error('Payment error:', result);
           toast.error('Pembayaran gagal');
+          setLoading(null);
         },
         onClose: () => {
           console.log('Payment popup closed');
+          setLoading(null);
         },
       });
-      
-      if (!opened) {
-        toast.error('Popup pembayaran sedang terbuka');
-      }
     } catch (error: any) {
       console.error('Payment error:', error);
       toast.error(error.message || 'Terjadi kesalahan');
-    } finally {
       setLoading(null);
     }
   };

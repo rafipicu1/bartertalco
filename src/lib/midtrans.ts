@@ -1,6 +1,7 @@
 // Midtrans Snap.js helper to prevent duplicate popup calls
 let isSnapLoading = false;
 let isSnapOpen = false;
+let currentSnapToken: string | null = null;
 
 declare global {
   interface Window {
@@ -68,37 +69,58 @@ export function openSnapPayment(
     onClose: () => void;
   }
 ): boolean {
-  // Prevent opening if already open
-  if (isSnapOpen) {
-    console.warn('Snap popup is already open');
-    return false;
-  }
-  
   if (!window.snap) {
     console.error('Snap.js not loaded');
     return false;
   }
   
-  isSnapOpen = true;
+  // IMPORTANT: Always hide any existing popup first to reset Snap.js internal state
+  // This prevents "Invalid state transition from PopupInView to PopupInView" error
+  try {
+    window.snap.hide();
+  } catch (e) {
+    // Ignore errors if no popup is open
+    console.log('No existing popup to hide');
+  }
   
-  window.snap.pay(token, {
-    onSuccess: (result: any) => {
+  // Small delay to ensure Snap.js state is reset
+  setTimeout(() => {
+    isSnapOpen = true;
+    currentSnapToken = token;
+    
+    try {
+      window.snap.pay(token, {
+        onSuccess: (result: any) => {
+          isSnapOpen = false;
+          currentSnapToken = null;
+          callbacks.onSuccess(result);
+        },
+        onPending: (result: any) => {
+          isSnapOpen = false;
+          currentSnapToken = null;
+          callbacks.onPending(result);
+        },
+        onError: (result: any) => {
+          isSnapOpen = false;
+          currentSnapToken = null;
+          callbacks.onError(result);
+        },
+        onClose: () => {
+          isSnapOpen = false;
+          currentSnapToken = null;
+          callbacks.onClose();
+        },
+      });
+    } catch (error) {
+      console.error('Error opening Snap popup:', error);
       isSnapOpen = false;
-      callbacks.onSuccess(result);
-    },
-    onPending: (result: any) => {
-      isSnapOpen = false;
-      callbacks.onPending(result);
-    },
-    onError: (result: any) => {
-      isSnapOpen = false;
-      callbacks.onError(result);
-    },
-    onClose: () => {
-      isSnapOpen = false;
-      callbacks.onClose();
-    },
-  });
+      currentSnapToken = null;
+      // Try to hide and reset on error
+      try {
+        window.snap.hide();
+      } catch (e) {}
+    }
+  }, 100);
   
   return true;
 }
@@ -109,4 +131,26 @@ export function isSnapPopupOpen(): boolean {
 
 export function resetSnapState(): void {
   isSnapOpen = false;
+  currentSnapToken = null;
+  
+  // Also try to hide any existing Snap popup
+  if (window.snap) {
+    try {
+      window.snap.hide();
+    } catch (e) {
+      // Ignore errors
+    }
+  }
+}
+
+export function hideSnapPopup(): void {
+  if (window.snap) {
+    try {
+      window.snap.hide();
+      isSnapOpen = false;
+      currentSnapToken = null;
+    } catch (e) {
+      console.error('Error hiding Snap popup:', e);
+    }
+  }
 }
