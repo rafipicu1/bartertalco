@@ -33,9 +33,11 @@ const plans = [
     features: [
       'Swipe unlimited',
       '5 item aktif',
-      'Barter proposal unlimited',
+      'Proposal barter unlimited',
       'Wishlist unlimited',
+      'Lihat 100 item/hari',
       'Boost item',
+      'Prioritas di beranda & swipe',
     ],
   },
   {
@@ -47,11 +49,14 @@ const plans = [
     badge: 'Best Value',
     color: 'from-purple-500 to-pink-500',
     features: [
-      'Semua fitur Plus',
-      'Upload item unlimited',
-      'Prioritas homepage',
-      'Item insights',
-      'Badge PRO',
+      'Swipe unlimited',
+      'Item aktif unlimited',
+      'Proposal barter unlimited',
+      'Wishlist unlimited',
+      'Lihat item unlimited',
+      'Boost item',
+      'Prioritas tertinggi di beranda',
+      'Insight analytics',
     ],
   },
 ];
