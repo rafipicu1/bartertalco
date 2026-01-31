@@ -44,7 +44,7 @@ export default function Upload() {
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
   
-  const { limits, canUploadItem } = useSubscription();
+  const { limits, canUploadItem, consumeExtraPostSlot, subscription } = useSubscription();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -186,6 +186,19 @@ export default function Upload() {
       });
 
       if (error) throw error;
+
+      // Check if user needed to use an extra slot (over base limit)
+      const { data: itemCount } = await supabase
+        .from('items')
+        .select('id', { count: 'exact' })
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+      
+      const currentCount = itemCount?.length || 0;
+      if (currentCount > limits.active_items && (subscription?.extra_post_slots || 0) > 0) {
+        // Consume one extra slot
+        await consumeExtraPostSlot();
+      }
 
       toast.success('Barang berhasil diupload! 🎉');
       navigate('/profile');
