@@ -613,11 +613,13 @@ export default function Swipe() {
         </div>
 
         {/* Swipe Area */}
-        <main className="flex-1 flex items-start justify-center pt-2 px-2 overflow-hidden">
+        <main className="flex-1 flex items-stretch justify-center px-2 py-2 overflow-hidden">
           {loading ? (
-            <div className="animate-spin h-16 w-16 border-4 border-primary border-t-transparent rounded-full"></div>
+            <div className="flex items-center justify-center w-full">
+              <div className="animate-spin h-16 w-16 border-4 border-primary border-t-transparent rounded-full"></div>
+            </div>
           ) : currentItem ? (
-            <div className="w-full max-w-sm">
+            <div className="w-full max-w-sm h-full">
               <SwipeCard
                 key={currentItem.id}
                 item={currentItem}
