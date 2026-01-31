@@ -23,6 +23,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
   Users,
   Package,
   AlertTriangle,
@@ -38,9 +46,13 @@ import {
   UserPlus,
   Crown,
   Trash2,
+  LayoutDashboard,
+  CreditCard,
+  Receipt,
+  TrendingUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { UserDetailDialog } from '@/components/admin/UserDetailDialog';
 import { ItemDetailDialog } from '@/components/admin/ItemDetailDialog';
@@ -97,12 +109,54 @@ interface Item {
   };
 }
 
+interface Subscription {
+  id: string;
+  user_id: string;
+  tier: string;
+  status: string;
+  expires_at: string | null;
+  extra_post_slots: number;
+  extra_proposal_slots: number | null;
+  extra_swipe_slots: number | null;
+  created_at: string;
+  profiles?: {
+    username: string;
+    full_name?: string;
+  };
+}
+
+interface Transaction {
+  id: string;
+  user_id: string;
+  order_id: string;
+  transaction_type: string;
+  amount: number;
+  status: string;
+  tier: string | null;
+  period: string | null;
+  created_at: string;
+  profiles?: {
+    username: string;
+  };
+}
+
+interface UserRole {
+  id: string;
+  user_id: string;
+  role: string;
+  profiles?: {
+    username: string;
+    full_name?: string;
+    profile_photo_url?: string;
+  };
+}
+
 export default function Admin() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('reports');
+  const [activeTab, setActiveTab] = useState('dashboard');
   
   // Reports state
   const [reports, setReports] = useState<Report[]>([]);
@@ -125,8 +179,9 @@ export default function Admin() {
 
   // User detail view state
   const [viewingUser, setViewingUser] = useState<UserProfile | null>(null);
+  
   // Admin management state
-  const [admins, setAdmins] = useState<any[]>([]);
+  const [admins, setAdmins] = useState<UserRole[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [newAdminPassword, setNewAdminPassword] = useState('');
   const [showAddAdmin, setShowAddAdmin] = useState(false);
@@ -144,6 +199,11 @@ export default function Admin() {
   const [newUserUsername, setNewUserUsername] = useState('');
   const [newUserFullName, setNewUserFullName] = useState('');
   const [processingCreateUser, setProcessingCreateUser] = useState(false);
+
+  // Subscription & Transaction state
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
 
   useEffect(() => {
     checkAdminRole();
@@ -186,18 +246,106 @@ export default function Admin() {
 
   const fetchData = async () => {
     switch (activeTab) {
-      case 'reports':
-        await fetchReports();
+      case 'dashboard':
+        await Promise.all([fetchReports(), fetchUsers(), fetchItems(), fetchSubscriptions(), fetchTransactions()]);
+        break;
+      case 'subscriptions':
+        await fetchSubscriptions();
+        break;
+      case 'transactions':
+        await fetchTransactions();
         break;
       case 'users':
-        await fetchUsers();
+        await Promise.all([fetchUsers(), fetchUserRoles()]);
+        break;
+      case 'reports':
+        await fetchReports();
         break;
       case 'items':
         await fetchItems();
         break;
-      case 'admins':
-        await fetchAdmins();
-        break;
+    }
+  };
+
+  const fetchSubscriptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_subscriptions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      
+      // Fetch profiles separately
+      const subsWithProfiles = await Promise.all(
+        (data || []).map(async (sub) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username, full_name')
+            .eq('id', sub.user_id)
+            .single();
+          return { ...sub, profiles: profile };
+        })
+      );
+      
+      setSubscriptions(subsWithProfiles);
+    } catch (error) {
+      console.error('Error fetching subscriptions:', error);
+    }
+  };
+
+  const fetchTransactions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('payment_transactions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      
+      // Fetch profiles separately for each transaction
+      const transactionsWithProfiles = await Promise.all(
+        (data || []).map(async (tx) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', tx.user_id)
+            .single();
+          return { ...tx, profiles: profile };
+        })
+      );
+      
+      setTransactions(transactionsWithProfiles);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    }
+  };
+
+  const fetchUserRoles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('*');
+
+      if (error) throw error;
+      
+      // Fetch profiles separately
+      const rolesWithProfiles = await Promise.all(
+        (data || []).map(async (role) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username, full_name, profile_photo_url')
+            .eq('id', role.user_id)
+            .single();
+          return { ...role, profiles: profile };
+        })
+      );
+      
+      setUserRoles(rolesWithProfiles);
+    } catch (error) {
+      console.error('Error fetching user roles:', error);
     }
   };
 
@@ -205,18 +353,23 @@ export default function Admin() {
     try {
       const { data, error } = await supabase
         .from('user_roles')
-        .select(`
-          *,
-          profiles:user_id (
-            username,
-            full_name,
-            profile_photo_url
-          )
-        `)
+        .select('*')
         .eq('role', 'admin');
 
       if (error) throw error;
-      setAdmins(data || []);
+      
+      // Fetch profiles separately
+      const adminsWithProfiles = await Promise.all(
+        (data || []).map(async (admin) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username, full_name, profile_photo_url')
+            .eq('id', admin.user_id)
+            .single();
+          return { ...admin, profiles: profile };
+        })
+      );
+      setAdmins(adminsWithProfiles);
     } catch (error) {
       console.error('Error fetching admins:', error);
     }
@@ -353,7 +506,6 @@ export default function Admin() {
 
     setProcessingAdmin(true);
     try {
-      // Create new user via edge function (admin auth)
       const response = await supabase.functions.invoke('seed-test-users', {
         body: { 
           action: 'create_admin',
@@ -391,7 +543,7 @@ export default function Admin() {
 
       if (error) throw error;
       toast.success('Admin berhasil dihapus');
-      fetchAdmins();
+      fetchUserRoles();
     } catch (error) {
       console.error('Error removing admin:', error);
       toast.error('Gagal menghapus admin');
@@ -409,7 +561,7 @@ export default function Admin() {
 
       if (error) throw error;
       toast.success('User berhasil dijadikan admin');
-      fetchAdmins();
+      fetchUserRoles();
     } catch (error: any) {
       console.error('Error making admin:', error);
       toast.error(error.message || 'Gagal menjadikan admin');
@@ -434,6 +586,7 @@ export default function Admin() {
       toast.success(`User @${upgradeUser.username} berhasil diupgrade ke ${selectedTier.toUpperCase()}!`);
       setUpgradeUser(null);
       setSelectedTier('plus');
+      fetchSubscriptions();
     } catch (error: any) {
       console.error('Error upgrading user:', error);
       toast.error(error.message || 'Gagal upgrade user');
@@ -495,6 +648,16 @@ export default function Admin() {
         return <Badge variant="outline" className="bg-green-100 text-green-800">Aksi Diambil</Badge>;
       case 'dismissed':
         return <Badge variant="outline" className="bg-gray-100 text-gray-800">Ditolak</Badge>;
+      case 'settlement':
+      case 'capture':
+        return <Badge className="bg-green-500">Sukses</Badge>;
+      case 'expire':
+      case 'cancel':
+        return <Badge variant="destructive">Gagal</Badge>;
+      case 'active':
+        return <Badge className="bg-green-500">Aktif</Badge>;
+      case 'expired':
+        return <Badge variant="secondary">Expired</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -509,6 +672,32 @@ export default function Admin() {
       case 'other': return 'Lainnya';
       default: return reason;
     }
+  };
+
+  const getTierBadge = (tier: string) => {
+    switch (tier) {
+      case 'pro':
+        return <Badge className="bg-purple-500">PRO</Badge>;
+      case 'plus':
+        return <Badge className="bg-blue-500">PLUS</Badge>;
+      default:
+        return <Badge variant="secondary">FREE</Badge>;
+    }
+  };
+
+  const getTransactionTypeLabel = (type: string) => {
+    switch (type) {
+      case 'subscription': return 'Langganan';
+      case 'single_post': return 'Beli Slot Post';
+      case 'single_chat': return 'Beli Slot Chat';
+      case 'single_swipe': return 'Beli Slot Swipe';
+      default: return type;
+    }
+  };
+
+  const getUserRole = (userId: string) => {
+    const role = userRoles.find(r => r.user_id === userId);
+    return role?.role || 'user';
   };
 
   if (loading) {
@@ -530,6 +719,13 @@ export default function Admin() {
     item.name.toLowerCase().includes(itemSearch.toLowerCase())
   );
 
+  // Stats calculations
+  const totalRevenue = transactions
+    .filter(t => t.status === 'settlement' || t.status === 'capture')
+    .reduce((sum, t) => sum + t.amount, 0);
+  const activeSubscriptions = subscriptions.filter(s => s.status === 'active' && s.tier !== 'free').length;
+  const pendingReports = reports.filter(r => r.status === 'pending').length;
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card sticky top-0 z-10">
@@ -545,76 +741,289 @@ export default function Admin() {
       </header>
 
       <main className="container mx-auto px-4 py-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                <div>
-                  <p className="text-2xl font-bold">
-                    {reports.filter(r => r.status === 'pending').length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Laporan Pending</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-blue-500" />
-                <div>
-                  <p className="text-2xl font-bold">{users.length}</p>
-                  <p className="text-xs text-muted-foreground">Total Pengguna</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-green-500" />
-                <div>
-                  <p className="text-2xl font-bold">{items.length}</p>
-                  <p className="text-xs text-muted-foreground">Total Barang</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-purple-500" />
-                <div>
-                  <p className="text-2xl font-bold">{reports.length}</p>
-                  <p className="text-xs text-muted-foreground">Total Laporan</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 mb-6">
-            <TabsTrigger value="reports" className="gap-2">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 mb-6 h-auto">
+            <TabsTrigger value="dashboard" className="gap-1 text-xs sm:text-sm py-2">
+              <LayoutDashboard className="h-4 w-4" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </TabsTrigger>
+            <TabsTrigger value="subscriptions" className="gap-1 text-xs sm:text-sm py-2">
+              <Crown className="h-4 w-4" />
+              <span className="hidden sm:inline">Subs</span>
+            </TabsTrigger>
+            <TabsTrigger value="transactions" className="gap-1 text-xs sm:text-sm py-2">
+              <Receipt className="h-4 w-4" />
+              <span className="hidden sm:inline">Transaksi</span>
+            </TabsTrigger>
+            <TabsTrigger value="users" className="gap-1 text-xs sm:text-sm py-2">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Users</span>
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="gap-1 text-xs sm:text-sm py-2">
               <AlertTriangle className="h-4 w-4" />
               <span className="hidden sm:inline">Laporan</span>
             </TabsTrigger>
-            <TabsTrigger value="users" className="gap-2">
-              <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Pengguna</span>
-            </TabsTrigger>
-            <TabsTrigger value="items" className="gap-2">
+            <TabsTrigger value="items" className="gap-1 text-xs sm:text-sm py-2">
               <Package className="h-4 w-4" />
               <span className="hidden sm:inline">Barang</span>
             </TabsTrigger>
-            <TabsTrigger value="admins" className="gap-2">
-              <Crown className="h-4 w-4" />
-              <span className="hidden sm:inline">Admin</span>
-            </TabsTrigger>
           </TabsList>
+
+          {/* Dashboard Tab */}
+          <TabsContent value="dashboard">
+            <div className="space-y-6">
+              {/* Stats Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-green-500" />
+                      <div>
+                        <p className="text-lg sm:text-2xl font-bold">{formatPrice(totalRevenue)}</p>
+                        <p className="text-xs text-muted-foreground">Total Pendapatan</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-5 w-5 text-yellow-500" />
+                      <div>
+                        <p className="text-2xl font-bold">{activeSubscriptions}</p>
+                        <p className="text-xs text-muted-foreground">Langganan Aktif</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-blue-500" />
+                      <div>
+                        <p className="text-2xl font-bold">{users.length}</p>
+                        <p className="text-xs text-muted-foreground">Total Users</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-red-500" />
+                      <div>
+                        <p className="text-2xl font-bold">{pendingReports}</p>
+                        <p className="text-xs text-muted-foreground">Laporan Pending</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Recent Transactions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Receipt className="h-5 w-5" />
+                    Transaksi Terbaru
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {transactions.slice(0, 5).map((tx) => (
+                      <div key={tx.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <CreditCard className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm font-medium">@{tx.profiles?.username || 'Unknown'}</p>
+                            <p className="text-xs text-muted-foreground">{getTransactionTypeLabel(tx.transaction_type)}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-primary">{formatPrice(tx.amount)}</p>
+                          {getStatusBadge(tx.status)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Subscriptions Tab */}
+          <TabsContent value="subscriptions">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">Daftar Langganan</h3>
+                <Badge variant="outline">{subscriptions.length} total</Badge>
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Tier</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Extra Slots</TableHead>
+                      <TableHead>Expires</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {subscriptions.map((sub) => (
+                      <TableRow key={sub.id}>
+                        <TableCell className="font-medium">@{sub.profiles?.username || 'Unknown'}</TableCell>
+                        <TableCell>{getTierBadge(sub.tier)}</TableCell>
+                        <TableCell>{getStatusBadge(sub.status)}</TableCell>
+                        <TableCell>
+                          <div className="text-xs space-y-1">
+                            {sub.extra_post_slots > 0 && <Badge variant="outline">+{sub.extra_post_slots} post</Badge>}
+                            {(sub.extra_proposal_slots || 0) > 0 && <Badge variant="outline">+{sub.extra_proposal_slots} chat</Badge>}
+                            {(sub.extra_swipe_slots || 0) > 0 && <Badge variant="outline">+{sub.extra_swipe_slots} swipe</Badge>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {sub.expires_at ? format(new Date(sub.expires_at), 'dd MMM yyyy', { locale: id }) : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Transactions Tab */}
+          <TabsContent value="transactions">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">Riwayat Transaksi</h3>
+                <Badge variant="outline">{transactions.length} total</Badge>
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Tipe</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((tx) => (
+                      <TableRow key={tx.id}>
+                        <TableCell className="font-medium">@{tx.profiles?.username || 'Unknown'}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm">{getTransactionTypeLabel(tx.transaction_type)}</span>
+                            {tx.tier && <span className="text-xs text-muted-foreground">{tx.tier.toUpperCase()}</span>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-bold text-primary">{formatPrice(tx.amount)}</TableCell>
+                        <TableCell>{getStatusBadge(tx.status)}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {format(new Date(tx.created_at), 'dd MMM yyyy HH:mm', { locale: id })}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Users Tab */}
+          <TabsContent value="users">
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cari pengguna..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Button onClick={() => setShowCreateUser(true)}>
+                  <UserPlus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Buat User</span>
+                </Button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Lokasi</TableHead>
+                      <TableHead>Bergabung</TableHead>
+                      <TableHead>Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((profile) => {
+                      const role = getUserRole(profile.id);
+                      return (
+                        <TableRow key={profile.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setViewingUser(profile)}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                                {profile.profile_photo_url ? (
+                                  <img src={profile.profile_photo_url} alt={profile.username} className="w-full h-full object-cover" />
+                                ) : (
+                                  <Users className="h-4 w-4 text-primary" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-medium text-sm">@{profile.username}</p>
+                                <p className="text-xs text-muted-foreground">{profile.full_name}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {role === 'admin' ? (
+                              <Badge className="bg-primary/20 text-primary">Admin</Badge>
+                            ) : (
+                              <Badge variant="secondary">User</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{profile.location}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {formatDistanceToNow(new Date(profile.created_at), { addSuffix: true, locale: id })}
+                          </TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => setViewingUser(profile)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => { setUpgradeUser(profile); setSelectedTier('plus'); }}>
+                                <Crown className="h-4 w-4" />
+                              </Button>
+                              {role !== 'admin' && (
+                                <Button variant="outline" size="sm" onClick={() => handleMakeAdmin(profile.id)}>
+                                  <Shield className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button variant="outline" size="sm" onClick={() => setSelectedUser(profile)}>
+                                <Ban className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </TabsContent>
 
           {/* Reports Tab */}
           <TabsContent value="reports">
@@ -639,17 +1048,10 @@ export default function Admin() {
                           </p>
                         )}
                         <p className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(report.created_at), {
-                            addSuffix: true,
-                            locale: id,
-                          })}
+                          {formatDistanceToNow(new Date(report.created_at), { addSuffix: true, locale: id })}
                         </p>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedReport(report)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => setSelectedReport(report)}>
                         <Eye className="h-4 w-4 mr-1" />
                         Tinjau
                       </Button>
@@ -657,88 +1059,6 @@ export default function Admin() {
                   </Card>
                 ))
               )}
-            </div>
-          </TabsContent>
-
-          {/* Users Tab */}
-          <TabsContent value="users">
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Cari pengguna..."
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Button onClick={() => setShowCreateUser(true)}>
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Buat User
-                </Button>
-              </div>
-
-              <div className="grid gap-4">
-                {filteredUsers.map((profile) => (
-                  <Card 
-                    key={profile.id} 
-                    className="p-4 cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => setViewingUser(profile)}
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          {profile.profile_photo_url ? (
-                            <img
-                              src={profile.profile_photo_url}
-                              alt={profile.username}
-                              className="w-full h-full rounded-full object-cover"
-                            />
-                          ) : (
-                            <Users className="h-5 w-5 text-primary" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium">{profile.username}</p>
-                          <p className="text-sm text-muted-foreground">{profile.location}</p>
-                        </div>
-                        {profile.verified && (
-                          <Badge className="bg-green-500/20 text-green-700">Verified</Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setViewingUser(profile)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setUpgradeUser(profile);
-                            setSelectedTier('plus');
-                          }}
-                        >
-                          <Crown className="h-4 w-4 mr-1" />
-                          Upgrade
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedUser(profile)}
-                        >
-                          <Ban className="h-4 w-4 mr-1" />
-                          Moderasi
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
             </div>
           </TabsContent>
 
@@ -782,11 +1102,7 @@ export default function Admin() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setViewingItem(item)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => setViewingItem(item)}>
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Badge variant={item.is_active ? 'default' : 'secondary'}>
@@ -797,84 +1113,12 @@ export default function Admin() {
                           size="sm"
                           onClick={() => toggleItemActive(item.id, item.is_active)}
                         >
-                          {item.is_active ? (
-                            <XCircle className="h-4 w-4" />
-                          ) : (
-                            <CheckCircle className="h-4 w-4" />
-                          )}
+                          {item.is_active ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
                         </Button>
                       </div>
                     </div>
                   </Card>
                 ))}
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Admins Tab */}
-          <TabsContent value="admins">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="font-semibold">Daftar Admin</h3>
-                <Button onClick={() => setShowAddAdmin(true)} size="sm">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Tambah Admin
-                </Button>
-              </div>
-
-              <div className="grid gap-4">
-                {admins.map((adminRole) => (
-                  <Card key={adminRole.id} className="p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          {adminRole.profiles?.profile_photo_url ? (
-                            <img
-                              src={adminRole.profiles.profile_photo_url}
-                              alt={adminRole.profiles?.username}
-                              className="w-full h-full rounded-full object-cover"
-                            />
-                          ) : (
-                            <Crown className="h-5 w-5 text-primary" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium">{adminRole.profiles?.username || 'Unknown'}</p>
-                          <p className="text-sm text-muted-foreground">{adminRole.profiles?.full_name}</p>
-                        </div>
-                        <Badge className="bg-primary/20 text-primary">Admin</Badge>
-                      </div>
-                      {adminRole.user_id !== user?.id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveAdmin(adminRole.id, adminRole.user_id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-              </div>
-
-              <div className="border-t pt-4 mt-6">
-                <h4 className="font-medium mb-3">Jadikan User Sebagai Admin</h4>
-                <div className="grid gap-2">
-                  {users.slice(0, 5).filter(u => !admins.some(a => a.user_id === u.id)).map((profile) => (
-                    <div key={profile.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">@{profile.username}</span>
-                        <span className="text-sm text-muted-foreground">{profile.full_name}</span>
-                      </div>
-                      <Button size="sm" variant="outline" onClick={() => handleMakeAdmin(profile.id)}>
-                        <Shield className="h-4 w-4 mr-1" />
-                        Jadikan Admin
-                      </Button>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           </TabsContent>
@@ -916,27 +1160,13 @@ export default function Admin() {
               </div>
 
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleReportAction('dismissed')}
-                  disabled={processingReport}
-                  className="flex-1"
-                >
+                <Button variant="outline" onClick={() => handleReportAction('dismissed')} disabled={processingReport} className="flex-1">
                   Tolak
                 </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => handleReportAction('reviewed')}
-                  disabled={processingReport}
-                  className="flex-1"
-                >
+                <Button variant="secondary" onClick={() => handleReportAction('reviewed')} disabled={processingReport} className="flex-1">
                   Ditinjau
                 </Button>
-                <Button
-                  onClick={() => handleReportAction('action_taken')}
-                  disabled={processingReport}
-                  className="flex-1"
-                >
+                <Button onClick={() => handleReportAction('action_taken')} disabled={processingReport} className="flex-1">
                   Ambil Aksi
                 </Button>
               </div>
@@ -982,82 +1212,15 @@ export default function Admin() {
               </div>
 
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setSelectedUser(null)}
-                  className="flex-1"
-                >
+                <Button variant="outline" onClick={() => setSelectedUser(null)} className="flex-1">
                   Batal
                 </Button>
-                <Button
-                  onClick={handleBanUser}
-                  disabled={!banReason || processingBan}
-                  className="flex-1"
-                >
-                  {processingBan ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    'Konfirmasi'
-                  )}
+                <Button onClick={handleBanUser} disabled={!banReason || processingBan} className="flex-1">
+                  {processingBan ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Konfirmasi'}
                 </Button>
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Admin Dialog */}
-      <Dialog open={showAddAdmin} onOpenChange={setShowAddAdmin}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tambah Admin Baru</DialogTitle>
-            <DialogDescription>
-              Buat akun admin baru dengan email dan password
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
-              <Input
-                type="email"
-                value={newAdminEmail}
-                onChange={(e) => setNewAdminEmail(e.target.value)}
-                placeholder="admin@example.com"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Password</label>
-              <Input
-                type="password"
-                value={newAdminPassword}
-                onChange={(e) => setNewAdminPassword(e.target.value)}
-                placeholder="Minimal 8 karakter"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowAddAdmin(false)}
-                className="flex-1"
-              >
-                Batal
-              </Button>
-              <Button
-                onClick={handleAddAdmin}
-                disabled={!newAdminEmail || !newAdminPassword || processingAdmin}
-                className="flex-1"
-              >
-                {processingAdmin ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  'Buat Admin'
-                )}
-              </Button>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
 
@@ -1102,23 +1265,11 @@ export default function Admin() {
             </div>
 
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setUpgradeUser(null)}
-                className="flex-1"
-              >
+              <Button variant="outline" onClick={() => setUpgradeUser(null)} className="flex-1">
                 Batal
               </Button>
-              <Button
-                onClick={handleUpgradeUser}
-                disabled={processingUpgrade}
-                className="flex-1"
-              >
-                {processingUpgrade ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  `Upgrade ke ${selectedTier.toUpperCase()}`
-                )}
+              <Button onClick={handleUpgradeUser} disabled={processingUpgrade} className="flex-1">
+                {processingUpgrade ? <Loader2 className="h-4 w-4 animate-spin" /> : `Upgrade ke ${selectedTier.toUpperCase()}`}
               </Button>
             </div>
           </div>
@@ -1178,11 +1329,7 @@ export default function Admin() {
             </div>
 
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowCreateUser(false)}
-                className="flex-1"
-              >
+              <Button variant="outline" onClick={() => setShowCreateUser(false)} className="flex-1">
                 Batal
               </Button>
               <Button
@@ -1190,11 +1337,7 @@ export default function Admin() {
                 disabled={!newUserEmail || !newUserPassword || !newUserUsername || processingCreateUser}
                 className="flex-1"
               >
-                {processingCreateUser ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  'Buat User'
-                )}
+                {processingCreateUser ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Buat User'}
               </Button>
             </div>
           </div>

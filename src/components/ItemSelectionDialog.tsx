@@ -74,11 +74,11 @@ export const ItemSelectionDialog = ({ isOpen, onClose, onItemSelected, targetIte
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100%-2rem)] max-w-2xl max-h-[85vh] overflow-y-auto mx-auto">
         <DialogHeader>
-          <DialogTitle>Pilih Barang untuk Tukar</DialogTitle>
-          <p className="text-sm text-muted-foreground mt-2">
-            Pilih barang kamu yang mau ditukar dengan <span className="font-semibold">{targetItem.name}</span>
+          <DialogTitle className="text-base sm:text-lg">Pilih Barang untuk Tukar</DialogTitle>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+            Pilih barang kamu yang mau ditukar dengan <span className="font-semibold line-clamp-1">{targetItem.name}</span>
           </p>
         </DialogHeader>
 
@@ -108,16 +108,16 @@ export const ItemSelectionDialog = ({ isOpen, onClose, onItemSelected, targetIte
                 <Sparkles className="h-4 w-4 text-primary" />
                 <span>Semua Barangmu</span>
               </div>
-              <div className="grid gap-3">
+              <div className="grid gap-2 sm:gap-3">
                 {items.map((item) => {
                   const topUp = calculateTopUp(item.estimated_value);
                   return (
                     <div
                       key={item.id}
-                      className="flex gap-4 p-4 border rounded-lg hover:border-primary transition-colors cursor-pointer"
+                      className="flex gap-3 p-3 border rounded-lg hover:border-primary transition-colors cursor-pointer"
                       onClick={() => onItemSelected(item.id, item.name, item.estimated_value, item)}
                     >
-                      <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                      <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                         {item.photos[0] ? (
                           <img
                             src={item.photos[0]}
@@ -126,21 +126,21 @@ export const ItemSelectionDialog = ({ isOpen, onClose, onItemSelected, targetIte
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <Package className="h-8 w-8 text-muted-foreground" />
+                            <Package className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
                           </div>
                         )}
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold mb-1">{item.name}</h3>
-                        <Badge variant="outline" className="mb-2">{item.category}</Badge>
-                        <p className="text-sm font-medium text-primary">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm line-clamp-1 mb-1">{item.name}</h3>
+                        <Badge variant="outline" className="text-[10px] mb-1">{item.category}</Badge>
+                        <p className="text-xs sm:text-sm font-medium text-primary">
                           {formatPrice(item.estimated_value)}
                         </p>
                         {topUp !== 0 && (
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
                             {topUp > 0 
                               ? `+ Tambah ${formatPrice(topUp)}`
-                              : `Barang kamu lebih mahal ${formatPrice(Math.abs(topUp))}`
+                              : `Lebih mahal ${formatPrice(Math.abs(topUp))}`
                             }
                           </p>
                         )}

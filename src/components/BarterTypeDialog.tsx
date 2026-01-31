@@ -72,39 +72,39 @@ export function BarterTypeDialog({ isOpen, onClose, onConfirm, myItem, targetIte
         </DialogHeader>
 
         {/* Items comparison */}
-        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-          <div className="flex-1 text-center">
-            <div className="w-16 h-16 mx-auto rounded-lg overflow-hidden bg-muted mb-1">
+        <div className="flex items-center gap-2 p-2 sm:p-3 bg-muted/50 rounded-lg">
+          <div className="flex-1 text-center min-w-0">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto rounded-lg overflow-hidden bg-muted mb-1">
               {myItem.photos[0] ? (
                 <img src={myItem.photos[0]} alt={myItem.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <Package className="h-6 w-6 text-muted-foreground" />
+                  <Package className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
                 </div>
               )}
             </div>
-            <p className="text-xs font-medium truncate">{myItem.name}</p>
-            <p className="text-xs text-primary">{formatPrice(myItem.estimated_value)}</p>
+            <p className="text-[10px] sm:text-xs font-medium line-clamp-1 px-1">{myItem.name}</p>
+            <p className="text-[10px] sm:text-xs text-primary">{formatPrice(myItem.estimated_value)}</p>
           </div>
-          <ArrowRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-          <div className="flex-1 text-center">
-            <div className="w-16 h-16 mx-auto rounded-lg overflow-hidden bg-muted mb-1">
+          <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
+          <div className="flex-1 text-center min-w-0">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto rounded-lg overflow-hidden bg-muted mb-1">
               {targetItem.photos[0] ? (
                 <img src={targetItem.photos[0]} alt={targetItem.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <Package className="h-6 w-6 text-muted-foreground" />
+                  <Package className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
                 </div>
               )}
             </div>
-            <p className="text-xs font-medium truncate">{targetItem.name}</p>
-            <p className="text-xs text-primary">{formatPrice(targetItem.estimated_value)}</p>
+            <p className="text-[10px] sm:text-xs font-medium line-clamp-1 px-1">{targetItem.name}</p>
+            <p className="text-[10px] sm:text-xs text-primary">{formatPrice(targetItem.estimated_value)}</p>
           </div>
         </div>
 
         {/* Value difference info */}
         {valueDifference !== 0 && (
-          <div className={`text-center text-sm p-2 rounded-lg ${valueDifference > 0 ? 'bg-yellow-500/10 text-yellow-700' : 'bg-green-500/10 text-green-700'}`}>
+          <div className={`text-center text-xs sm:text-sm p-2 rounded-lg ${valueDifference > 0 ? 'bg-yellow-500/10 text-yellow-700' : 'bg-green-500/10 text-green-700'}`}>
             {valueDifference > 0 
               ? `Barang tujuan lebih mahal ${formatPrice(suggestedTopUp)}`
               : `Barang kamu lebih mahal ${formatPrice(suggestedTopUp)}`
@@ -114,24 +114,24 @@ export function BarterTypeDialog({ isOpen, onClose, onConfirm, myItem, targetIte
 
         {/* Type selection */}
         {!selectedType && (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <Card 
-              className="p-4 cursor-pointer hover:border-primary transition-colors"
+              className="p-3 sm:p-4 cursor-pointer hover:border-primary transition-colors"
               onClick={() => setSelectedType('barter')}
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <ArrowRightLeft className="h-5 w-5 text-primary" />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <ArrowRightLeft className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-medium">Barter Langsung</h4>
-                  <p className="text-xs text-muted-foreground">Tukar barang tanpa tambahan uang</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-sm sm:text-base">Barter Langsung</h4>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Tukar barang tanpa tambahan uang</p>
                 </div>
               </div>
             </Card>
 
             <Card 
-              className="p-4 cursor-pointer hover:border-secondary transition-colors"
+              className="p-3 sm:p-4 cursor-pointer hover:border-secondary transition-colors"
               onClick={() => {
                 setSelectedType('tuker_tambah');
                 // Pre-fill with suggested amount
@@ -145,12 +145,12 @@ export function BarterTypeDialog({ isOpen, onClose, onConfirm, myItem, targetIte
               }}
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center">
-                  <Plus className="h-5 w-5 text-secondary" />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-secondary/10 flex items-center justify-center flex-shrink-0">
+                  <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-secondary" />
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-medium">Tuker Tambah</h4>
-                  <p className="text-xs text-muted-foreground">Tukar dengan tambahan uang</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-sm sm:text-base">Tuker Tambah</h4>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Tukar dengan tambahan uang</p>
                 </div>
               </div>
             </Card>
