@@ -578,9 +578,9 @@ export default function Swipe() {
 
   return (
     <MobileLayout>
-      <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background flex flex-col pb-20">
+      <div className="h-[calc(100vh-4rem)] bg-gradient-to-b from-primary/5 to-background flex flex-col overflow-hidden">
         {/* Compact Header */}
-        <div className="p-3 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-40">
+        <div className="p-2 border-b bg-background/80 backdrop-blur-sm flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <img
@@ -613,7 +613,7 @@ export default function Swipe() {
         </div>
 
         {/* Swipe Area */}
-        <main className="flex-1 flex items-center justify-center p-3">
+        <main className="flex-1 flex items-center justify-center p-2 overflow-hidden">
           {loading ? (
             <div className="animate-spin h-16 w-16 border-4 border-primary border-t-transparent rounded-full"></div>
           ) : currentItem ? (
