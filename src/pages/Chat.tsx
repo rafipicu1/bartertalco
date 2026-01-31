@@ -42,8 +42,8 @@ export default function Chat() {
     }
     fetchConversations();
     
-    // Subscribe to new messages
-    const channel = supabase
+    // Subscribe to conversation changes
+    const conversationChannel = supabase
       .channel('conversations-changes')
       .on(
         'postgres_changes',
@@ -56,8 +56,32 @@ export default function Chat() {
       )
       .subscribe();
 
+    // Subscribe to message changes (for read status updates)
+    const messagesChannel = supabase
+      .channel('messages-read-status')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages'
+        },
+        () => fetchConversations()
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages'
+        },
+        () => fetchConversations()
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(conversationChannel);
+      supabase.removeChannel(messagesChannel);
     };
   }, [user]);
 
