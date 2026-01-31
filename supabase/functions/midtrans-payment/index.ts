@@ -45,7 +45,53 @@ const PRICING = {
   pro_monthly: { amount: 79000, name: 'Bartr Pro (Bulanan)', tier: 'pro', period: 'monthly' },
   pro_yearly: { amount: 799000, name: 'Bartr Pro (Tahunan)', tier: 'pro', period: 'yearly' },
   single_post: { amount: 3000, name: 'Upload Item Tambahan', tier: null, period: null },
+  single_chat: { amount: 1000, name: 'Chat Tambahan (1x)', tier: null, period: null },
+  single_swipe: { amount: 500, name: 'Swipe Tambahan (5x)', tier: null, period: null },
   boost_24h: { amount: 10000, name: 'Boost Item 24 Jam', tier: null, period: null },
+}
+
+// Helper function to add extra slots
+async function addExtraSlot(supabase: any, userId: string, slotField: string, amount: number) {
+  // First check if user has subscription record
+  const { data: existingSub } = await supabase
+    .from('user_subscriptions')
+    .select('extra_post_slots, extra_proposal_slots, extra_swipe_slots')
+    .eq('user_id', userId)
+    .single()
+  
+  if (existingSub) {
+    // Update existing - increment the specific slot field
+    const currentValue = (existingSub as any)[slotField] || 0
+    const { error: updateError } = await supabase
+      .from('user_subscriptions')
+      .update({
+        [slotField]: currentValue + amount,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+    
+    if (updateError) {
+      console.error(`Error updating ${slotField}:`, updateError)
+    } else {
+      console.log(`Successfully added ${amount} to ${slotField} for user:`, userId)
+    }
+  } else {
+    // Create new subscription record
+    const { error: insertError } = await supabase
+      .from('user_subscriptions')
+      .insert({
+        user_id: userId,
+        tier: 'free',
+        status: 'active',
+        [slotField]: amount,
+      })
+    
+    if (insertError) {
+      console.error(`Error creating subscription with ${slotField}:`, insertError)
+    } else {
+      console.log(`Successfully created subscription with ${slotField} for user:`, userId)
+    }
+  }
 }
 
 serve(async (req) => {
@@ -253,46 +299,18 @@ serve(async (req) => {
         } else if (transaction.transaction_type === 'single_post') {
           // Add 1 extra post slot for single_post purchase
           console.log('Processing single_post for user:', transaction.user_id)
+          await addExtraSlot(supabase, transaction.user_id, 'extra_post_slots', 1)
           
-          // First check if user has subscription record
-          const { data: existingSub } = await supabase
-            .from('user_subscriptions')
-            .select('extra_post_slots')
-            .eq('user_id', transaction.user_id)
-            .single()
+        } else if (transaction.transaction_type === 'single_chat') {
+          // Add 1 extra proposal/chat slot
+          console.log('Processing single_chat for user:', transaction.user_id)
+          await addExtraSlot(supabase, transaction.user_id, 'extra_proposal_slots', 1)
           
-          if (existingSub) {
-            // Update existing - increment extra_post_slots
-            const { error: updateError } = await supabase
-              .from('user_subscriptions')
-              .update({
-                extra_post_slots: (existingSub.extra_post_slots || 0) + 1,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('user_id', transaction.user_id)
-            
-            if (updateError) {
-              console.error('Error updating extra_post_slots:', updateError)
-            } else {
-              console.log('Successfully added extra_post_slot for user:', transaction.user_id)
-            }
-          } else {
-            // Create new subscription record with 1 extra slot
-            const { error: insertError } = await supabase
-              .from('user_subscriptions')
-              .insert({
-                user_id: transaction.user_id,
-                tier: 'free',
-                status: 'active',
-                extra_post_slots: 1,
-              })
-            
-            if (insertError) {
-              console.error('Error creating subscription with extra_post_slots:', insertError)
-            } else {
-              console.log('Successfully created subscription with extra_post_slot for user:', transaction.user_id)
-            }
-          }
+        } else if (transaction.transaction_type === 'single_swipe') {
+          // Add 5 extra swipe slots
+          console.log('Processing single_swipe for user:', transaction.user_id)
+          await addExtraSlot(supabase, transaction.user_id, 'extra_swipe_slots', 5)
+          
         } else if (transaction.transaction_type === 'boost') {
           // Extract item_id from metadata if available
           const itemId = notification.metadata?.item_id
