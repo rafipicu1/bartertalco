@@ -214,9 +214,20 @@ serve(async (req) => {
     }
 
     // Handle Midtrans notification (webhook)
-    if (path === 'notification' && req.method === 'POST') {
+    // Accept notifications at /notification path OR direct POST to base URL
+    if (req.method === 'POST' && (path === 'notification' || path === 'midtrans-payment')) {
       const notification = await req.json()
-      console.log('Midtrans notification:', notification)
+      
+      // Check if this is a notification payload (has transaction_status or order_id)
+      if (!notification.transaction_status && !notification.order_id) {
+        // Not a notification, return 404
+        return new Response(JSON.stringify({ error: 'Not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      
+      console.log('Midtrans notification received:', notification)
 
       const { order_id, transaction_status, fraud_status, signature_key } = notification
 
@@ -245,7 +256,8 @@ serve(async (req) => {
 
       if (txError || !transaction) {
         console.error('Transaction not found:', order_id)
-        return new Response(JSON.stringify({ success: false }), {
+        // Return 200 OK to Midtrans even if transaction not found
+        return new Response(JSON.stringify({ success: true, message: 'Transaction not found but acknowledged' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
@@ -297,22 +309,15 @@ serve(async (req) => {
               onConflict: 'user_id',
             })
         } else if (transaction.transaction_type === 'single_post') {
-          // Add 1 extra post slot for single_post purchase
           console.log('Processing single_post for user:', transaction.user_id)
           await addExtraSlot(supabase, transaction.user_id, 'extra_post_slots', 1)
-          
         } else if (transaction.transaction_type === 'single_chat') {
-          // Add 1 extra proposal/chat slot
           console.log('Processing single_chat for user:', transaction.user_id)
           await addExtraSlot(supabase, transaction.user_id, 'extra_proposal_slots', 1)
-          
         } else if (transaction.transaction_type === 'single_swipe') {
-          // Add 5 extra swipe slots
           console.log('Processing single_swipe for user:', transaction.user_id)
           await addExtraSlot(supabase, transaction.user_id, 'extra_swipe_slots', 5)
-          
         } else if (transaction.transaction_type === 'boost') {
-          // Extract item_id from metadata if available
           const itemId = notification.metadata?.item_id
           if (itemId) {
             const expiresAt = new Date()
