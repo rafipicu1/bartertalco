@@ -99,7 +99,7 @@ export function SwipeCard({ item, onSwipe, style, isLiked = false }: SwipeCardPr
       className="absolute w-full max-w-full overflow-hidden"
     >
       <Card className="overflow-hidden shadow-2xl border-2 border-border/50 bg-card cursor-grab active:cursor-grabbing max-w-full">
-        <div className="relative h-[420px] sm:h-[480px]">
+        <div className="relative h-[320px] sm:h-[360px]">
           <img
             src={item.photos[0] || '/placeholder.svg'}
             alt={item.name}
