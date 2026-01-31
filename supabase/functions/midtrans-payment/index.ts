@@ -182,13 +182,27 @@ serve(async (req) => {
       const snapData = await snapResponse.json()
       console.log('Midtrans response:', snapData)
 
+      // Determine transaction type properly
+      let transactionType = 'single_post';
+      if (pricing.tier) {
+        transactionType = 'subscription';
+      } else if (product_type === 'single_chat') {
+        transactionType = 'single_chat';
+      } else if (product_type === 'single_swipe') {
+        transactionType = 'single_swipe';
+      } else if (product_type.includes('boost')) {
+        transactionType = 'boost';
+      } else if (product_type === 'single_post') {
+        transactionType = 'single_post';
+      }
+
       // Save transaction to database
       const { error: insertError } = await supabase
         .from('payment_transactions')
         .insert({
           user_id: user.id,
           order_id: orderId,
-          transaction_type: pricing.tier ? 'subscription' : product_type.includes('boost') ? 'boost' : 'single_post',
+          transaction_type: transactionType,
           amount: pricing.amount,
           tier: pricing.tier,
           period: pricing.period,
