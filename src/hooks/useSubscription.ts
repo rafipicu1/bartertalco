@@ -31,7 +31,7 @@ interface Subscription {
 const FREE_LIMITS: TierLimits = {
   daily_swipes: 20,
   active_items: 1,
-  daily_proposals: 3,
+  daily_proposals: 5,
   wishlist_limit: 10,
   daily_views: 30,
   can_boost: false,

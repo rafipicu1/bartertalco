@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Crown, Zap, Sparkles, ArrowLeft, Package } from 'lucide-react';
+import { Check, Crown, Zap, Sparkles, ArrowLeft, Package, MessageCircle } from 'lucide-react';
 import { MobileLayout } from '@/components/MobileLayout';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,7 +20,7 @@ const plans = [
     features: [
       { label: 'Swipe 20x per hari', included: true },
       { label: '1 item aktif', included: true },
-      { label: '3 proposal barter/hari', included: true },
+      { label: '5 proposal barter/hari', included: true },
       { label: '10 wishlist', included: true },
       { label: 'Lihat 30 item/hari', included: true },
       { label: 'Boost item', included: false },
@@ -158,12 +158,47 @@ export default function Pricing() {
       </header>
 
       <main className="container mx-auto px-4 py-6 pb-24 max-w-lg">
+        {/* Limit Message Banner */}
+        {(limitType === 'swipe' || limitType === 'proposal') && (
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/30 rounded-xl text-center">
+            {limitType === 'swipe' ? (
+              <>
+                <h2 className="text-xl font-bold text-destructive mb-2">😔 Jatah Swipe-mu Habis!</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Upgrade untuk swipe unlimited, atau coba lagi besok.
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="w-full mb-2"
+                  onClick={() => navigate('/')}
+                >
+                  Coba Besok
+                </Button>
+              </>
+            ) : (
+              <>
+                <h2 className="text-xl font-bold text-destructive mb-2">😔 Jatah Mengajukanmu Habis!</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Upgrade untuk unlimited proposal, atau beli 1 chat tambahan.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
         <div className="text-center mb-8">
           {limitType === 'upload' ? (
             <>
               <h2 className="text-2xl font-bold mb-2">Limit Item Tercapai! 📦</h2>
               <p className="text-muted-foreground">
                 Kamu sudah mencapai batas item aktif. Upgrade atau bayar per posting!
+              </p>
+            </>
+          ) : limitType === 'swipe' || limitType === 'proposal' ? (
+            <>
+              <h2 className="text-2xl font-bold mb-2">Upgrade Sekarang?</h2>
+              <p className="text-muted-foreground">
+                Pilih plan untuk akses unlimited
               </p>
             </>
           ) : (
@@ -270,10 +305,10 @@ export default function Pricing() {
         </div>
 
         {/* Single Post Payment Option */}
-        <Card className="mt-6 p-5 bg-green-500/5 border-green-500/20">
+        <Card className="mt-6 p-5 bg-accent/5 border-accent/20">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-              <Package className="h-5 w-5 text-green-500" />
+            <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
+              <Package className="h-5 w-5 text-accent" />
             </div>
             <div>
               <h3 className="font-bold text-lg">💡 Mau posting 1 barang aja?</h3>
@@ -291,13 +326,45 @@ export default function Pricing() {
           
           <Button
             variant="outline"
-            className="w-full border-green-500/50 hover:bg-green-500/10 text-green-700 dark:text-green-400"
+            className="w-full border-accent/50 hover:bg-accent/10"
             onClick={() => handleSubscribe('single_post')}
             disabled={loading !== null}
           >
             {loading === 'single_post' ? 'Memproses...' : 'Bayar Rp3.000 (1x Posting)'}
           </Button>
         </Card>
+
+        {/* Single Chat Payment Option - Only show when proposal limit reached */}
+        {limitType === 'proposal' && (
+          <Card className="mt-4 p-5 bg-secondary/5 border-secondary/20">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center">
+                <MessageCircle className="h-5 w-5 text-secondary" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg">💬 Butuh 1 chat aja?</h3>
+                <p className="text-sm text-muted-foreground">Beli satuan tanpa upgrade</p>
+              </div>
+              <div className="ml-auto text-right">
+                <p className="text-xl font-bold">Rp1.000</p>
+                <p className="text-xs text-muted-foreground">per chat</p>
+              </div>
+            </div>
+            
+            <p className="text-sm text-muted-foreground mb-4">
+              Beli 1 kesempatan chat untuk mengajukan barter ke pemilik barang.
+            </p>
+            
+            <Button
+              variant="outline"
+              className="w-full border-secondary/50 hover:bg-secondary/10"
+              onClick={() => handleSubscribe('single_chat')}
+              disabled={loading !== null}
+            >
+              {loading === 'single_chat' ? 'Memproses...' : 'Bayar Rp1.000 (1x Chat)'}
+            </Button>
+          </Card>
+        )}
 
         <div className="mt-8 p-4 bg-muted rounded-lg">
           <h4 className="font-medium mb-2">💳 Metode Pembayaran</h4>
