@@ -613,7 +613,7 @@ export default function Swipe() {
         </div>
 
         {/* Swipe Area */}
-        <main className="flex-1 flex items-center justify-center p-2 overflow-hidden">
+        <main className="flex-1 flex items-start justify-center pt-2 px-2 overflow-hidden">
           {loading ? (
             <div className="animate-spin h-16 w-16 border-4 border-primary border-t-transparent rounded-full"></div>
           ) : currentItem ? (
