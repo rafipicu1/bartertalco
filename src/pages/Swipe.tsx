@@ -491,12 +491,15 @@ export default function Swipe() {
               {/* Province */}
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Provinsi</Label>
-                <Select value={selectedProvince} onValueChange={setSelectedProvince}>
+                <Select 
+                  value={selectedProvince || "__all__"} 
+                  onValueChange={(val) => setSelectedProvince(val === "__all__" ? "" : val)}
+                >
                   <SelectTrigger className="bg-background">
                     <SelectValue placeholder="Semua Provinsi" />
                   </SelectTrigger>
                   <SelectContent className="bg-background border shadow-lg z-50 max-h-60">
-                    <SelectItem value="">Semua Provinsi</SelectItem>
+                    <SelectItem value="__all__">Semua Provinsi</SelectItem>
                     {INDONESIA_LOCATIONS.map((p) => (
                       <SelectItem key={p.name} value={p.name}>
                         {p.name}
@@ -510,13 +513,16 @@ export default function Swipe() {
               {selectedProvince && (
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Kota/Kabupaten</Label>
-                  <Select value={selectedCity} onValueChange={setSelectedCity}>
+                  <Select 
+                    value={selectedCity || "__all__"} 
+                    onValueChange={(val) => setSelectedCity(val === "__all__" ? "" : val)}
+                  >
                     <SelectTrigger className="bg-background">
                       <SelectValue placeholder="Semua Kota" />
                     </SelectTrigger>
                     <SelectContent className="bg-background border shadow-lg z-50 max-h-60">
-                      <SelectItem value="">Semua Kota</SelectItem>
-                      {availableCities.map((c) => (
+                      <SelectItem value="__all__">Semua Kota</SelectItem>
+                      {availableCities.filter(c => c.name).map((c) => (
                         <SelectItem key={c.name} value={c.name}>
                           {c.name}
                         </SelectItem>
@@ -530,13 +536,16 @@ export default function Swipe() {
               {selectedCity && (
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Kecamatan</Label>
-                  <Select value={selectedDistrict} onValueChange={setSelectedDistrict}>
+                  <Select 
+                    value={selectedDistrict || "__all__"} 
+                    onValueChange={(val) => setSelectedDistrict(val === "__all__" ? "" : val)}
+                  >
                     <SelectTrigger className="bg-background">
                       <SelectValue placeholder="Semua Kecamatan" />
                     </SelectTrigger>
                     <SelectContent className="bg-background border shadow-lg z-50 max-h-60">
-                      <SelectItem value="">Semua Kecamatan</SelectItem>
-                      {availableDistricts.map((d) => (
+                      <SelectItem value="__all__">Semua Kecamatan</SelectItem>
+                      {availableDistricts.filter(d => d.name).map((d) => (
                         <SelectItem key={d.name} value={d.name}>
                           {d.name}
                         </SelectItem>
