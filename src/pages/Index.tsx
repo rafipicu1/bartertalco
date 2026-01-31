@@ -326,8 +326,18 @@ const Index = () => {
 
                       <div className="flex items-center justify-between pt-1">
                         <div className="flex items-center gap-1">
-                          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                            <User className="h-3 w-3 text-primary-foreground" />
+                          <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
+                            {item.profiles?.profile_photo_url ? (
+                              <img 
+                                src={item.profiles.profile_photo_url} 
+                                alt={item.profiles.username}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                                <User className="h-3 w-3 text-primary-foreground" />
+                              </div>
+                            )}
                           </div>
                           <span className="text-[10px] truncate max-w-[60px]">
                             {item.profiles?.username}

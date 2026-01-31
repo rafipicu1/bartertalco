@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, TrendingUp, Heart, X, ThumbsUp, Navigation } from 'lucide-react';
+import { MapPin, TrendingUp, Heart, X, ThumbsUp, Navigation, User } from 'lucide-react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +20,11 @@ interface SwipeCardProps {
     district?: string | null;
     latitude: number | null;
     longitude: number | null;
+    profiles?: {
+      username: string;
+      profile_photo_url?: string | null;
+      location?: string;
+    };
   };
   onSwipe: (direction: 'left' | 'right' | 'up') => void;
   style?: any;
@@ -149,10 +154,31 @@ export function SwipeCard({ item, onSwipe, style, isLiked = false }: SwipeCardPr
                 {formatPrice(item.estimated_value)}
               </Badge>
             </div>
-            <div className="flex gap-2">
-              <Badge variant="outline" className="text-xs bg-background/30 text-white border-white/50">
-                {CONDITION_LABELS[item.condition] || item.condition}
-              </Badge>
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                <Badge variant="outline" className="text-xs bg-background/30 text-white border-white/50">
+                  {CONDITION_LABELS[item.condition] || item.condition}
+                </Badge>
+              </div>
+              {/* Owner info */}
+              {item.profiles && (
+                <div className="flex items-center gap-2 bg-black/30 px-2 py-1 rounded-full">
+                  <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
+                    {item.profiles.profile_photo_url ? (
+                      <img 
+                        src={item.profiles.profile_photo_url} 
+                        alt={item.profiles.username}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                        <User className="h-3 w-3 text-primary-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-xs font-medium">@{item.profiles.username}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
