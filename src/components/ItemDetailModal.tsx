@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { ItemSelectionDialog } from "@/components/ItemSelectionDialog";
 import { ReportDialog } from "@/components/ReportDialog";
 import { BarterTypeDialog } from "@/components/BarterTypeDialog";
+import { useSubscription } from "@/hooks/useSubscription";
 
 interface ItemDetailModalProps {
   item: {
@@ -49,6 +50,7 @@ const CONDITION_LABELS: Record<string, string> = {
 export const ItemDetailModal = ({ item, isOpen, onClose }: ItemDetailModalProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { canPropose, incrementUsage } = useSubscription();
   const [distance, setDistance] = useState<string | null>(null);
   const [contacting, setContacting] = useState(false);
   const [showItemSelection, setShowItemSelection] = useState(false);
@@ -87,6 +89,14 @@ export const ItemDetailModal = ({ item, isOpen, onClose }: ItemDetailModalProps)
       navigate('/auth');
       return;
     }
+    
+    // Check proposal limit
+    if (!canPropose()) {
+      navigate('/pricing?limit=proposal');
+      onClose();
+      return;
+    }
+    
     setShowItemSelection(true);
   };
 
@@ -178,6 +188,9 @@ Apakah kamu tertarik? Bisa nego kok! 😊`;
           message_type: 'barter_proposal',
           item_id: selectedUserItem.id,
         });
+
+      // Increment proposal usage
+      await incrementUsage('proposal');
 
       // Navigate with item data
       navigate(`/chat/${conversationId}`, {

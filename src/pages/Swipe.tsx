@@ -5,12 +5,20 @@ import { SwipeCard } from '@/components/SwipeCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Sparkles, Plus, ArrowRight, ArrowLeft, RefreshCw, Package, Search } from 'lucide-react';
+import { Sparkles, Plus, ArrowRight, RefreshCw, Package, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { MobileLayout } from '@/components/MobileLayout';
 import { useSubscription } from '@/hooks/useSubscription';
-import { UpgradeModal } from '@/components/UpgradeModal';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { INDONESIA_LOCATIONS, getProvince, getCity } from '@/data/indonesiaLocations';
 
 const CATEGORY_OPTIONS = [
   { value: 'all', label: 'Semua Kategori', icon: '🔍' },
@@ -40,11 +48,17 @@ export default function Swipe() {
   const [likedItemIds, setLikedItemIds] = useState<Set<string>>(new Set());
   const [userItems, setUserItems] = useState<any[]>([]);
   const [selectedUserItem, setSelectedUserItem] = useState<any | null>(null);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [step, setStep] = useState<SwipeStep>('select-item');
   
-  const { canSwipe, incrementUsage, getRemainingSwipes, usage, limits } = useSubscription();
+  // Location filters
+  const [selectedProvince, setSelectedProvince] = useState<string>('');
+  const [selectedCity, setSelectedCity] = useState<string>('');
+  const [selectedDistrict, setSelectedDistrict] = useState<string>('');
+  const [availableCities, setAvailableCities] = useState<{ name: string }[]>([]);
+  const [availableDistricts, setAvailableDistricts] = useState<{ name: string }[]>([]);
+  
+  const { canSwipe, incrementUsage, getRemainingSwipes } = useSubscription();
 
   useEffect(() => {
     loadUserItems();
@@ -55,7 +69,35 @@ export default function Swipe() {
       setLoading(true);
       loadItems();
     }
-  }, [step, selectedUserItem, selectedCategory]);
+  }, [step, selectedUserItem, selectedCategory, selectedProvince, selectedCity, selectedDistrict]);
+
+  // Update available cities when province changes
+  useEffect(() => {
+    if (selectedProvince) {
+      const provinceData = getProvince(selectedProvince);
+      setAvailableCities(provinceData?.cities || []);
+      setSelectedCity('');
+      setSelectedDistrict('');
+      setAvailableDistricts([]);
+    } else {
+      setAvailableCities([]);
+      setSelectedCity('');
+      setSelectedDistrict('');
+      setAvailableDistricts([]);
+    }
+  }, [selectedProvince]);
+
+  // Update available districts when city changes
+  useEffect(() => {
+    if (selectedProvince && selectedCity) {
+      const cityData = getCity(selectedProvince, selectedCity);
+      setAvailableDistricts(cityData?.districts || []);
+      setSelectedDistrict('');
+    } else {
+      setAvailableDistricts([]);
+      setSelectedDistrict('');
+    }
+  }, [selectedProvince, selectedCity]);
 
   const loadUserItems = async () => {
     if (!user) return;
@@ -122,11 +164,23 @@ export default function Swipe() {
         .eq('is_active', true)
         .neq('user_id', user.id);
 
+      // Filter by category
       if (selectedCategory && selectedCategory !== 'all') {
         query = query.eq('category', selectedCategory as any);
       }
 
-      if (itemIds.length > 0 && selectedCategory === 'all') {
+      // Filter by location
+      if (selectedProvince) {
+        query = query.eq('province', selectedProvince);
+      }
+      if (selectedCity) {
+        query = query.eq('city', selectedCity);
+      }
+      if (selectedDistrict) {
+        query = query.eq('district', selectedDistrict);
+      }
+
+      if (itemIds.length > 0 && selectedCategory === 'all' && !selectedProvince) {
         query = query.in('id', itemIds);
       }
 
@@ -151,7 +205,8 @@ export default function Swipe() {
     if (!user || !selectedUserItem || currentIndex >= items.length) return;
 
     if (!canSwipe()) {
-      setShowUpgradeModal(true);
+      // Redirect to pricing with swipe limit message
+      navigate('/pricing?limit=swipe');
       return;
     }
 
@@ -221,7 +276,7 @@ export default function Swipe() {
               }
 
               if (conversationId) {
-                const formatPrice = (value: number) => {
+                const formatPriceMsg = (value: number) => {
                   return new Intl.NumberFormat('id-ID', {
                     style: 'currency',
                     currency: 'IDR',
@@ -229,13 +284,7 @@ export default function Swipe() {
                   }).format(value);
                 };
 
-                const matchMessage = `🎉 **MATCH!** 🎉
-
-Kalian berdua saling suka! 
-
-*${selectedUserItem.name}* (${formatPrice(selectedUserItem.estimated_value)}) ↔️ *${currentItem.name}* (${formatPrice(currentItem.estimated_value)})
-
-Yuk lanjutkan diskusi untuk barter! 👇`;
+                const matchMessage = `🎉 **MATCH!** 🎉\n\nKalian berdua saling suka! \n\n*${selectedUserItem.name}* (${formatPriceMsg(selectedUserItem.estimated_value)}) ↔️ *${currentItem.name}* (${formatPriceMsg(currentItem.estimated_value)})\n\nYuk lanjutkan diskusi untuk barter! 👇`;
 
                 await supabase
                   .from('messages')
@@ -276,8 +325,7 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
     setStep('select-category');
   };
 
-  const handleSelectCategory = (category: string) => {
-    setSelectedCategory(category);
+  const handleStartSwipe = () => {
     setStep('swipe');
   };
 
@@ -285,6 +333,9 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
     setStep('select-item');
     setItems([]);
     setCurrentIndex(0);
+    setSelectedProvince('');
+    setSelectedCity('');
+    setSelectedDistrict('');
   };
 
   const formatPrice = (value: number) => {
@@ -295,11 +346,18 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
     }).format(value);
   };
 
+  const getLocationLabel = () => {
+    if (selectedDistrict) return `${selectedCity}, ${selectedDistrict}`;
+    if (selectedCity) return selectedCity;
+    if (selectedProvince) return selectedProvince;
+    return 'Semua Lokasi';
+  };
+
   // Loading state
   if (loading && step === 'select-item') {
     return (
-      <MobileLayout showBottomNav={false}>
-        <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background flex items-center justify-center">
+      <MobileLayout>
+        <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background flex items-center justify-center pb-20">
           <div className="animate-spin h-16 w-16 border-4 border-primary border-t-transparent rounded-full"></div>
         </div>
       </MobileLayout>
@@ -310,8 +368,8 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
   if (step === 'select-item') {
     if (userItems.length === 0) {
       return (
-        <MobileLayout showBottomNav={false}>
-          <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background flex flex-col items-center justify-center p-6 text-center">
+        <MobileLayout>
+          <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background flex flex-col items-center justify-center p-6 text-center pb-24">
             <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mb-6">
               <Package className="h-12 w-12 text-primary" />
             </div>
@@ -323,17 +381,14 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
               <Plus className="h-5 w-5" />
               Pasang Barang
             </Button>
-            <Button variant="ghost" onClick={() => navigate('/')} className="mt-4">
-              Kembali ke Beranda
-            </Button>
           </div>
         </MobileLayout>
       );
     }
 
     return (
-      <MobileLayout showBottomNav={false}>
-        <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">
+      <MobileLayout>
+        <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background pb-24">
           {/* Header */}
           <div className="p-6 text-center">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -369,24 +424,16 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
               </Card>
             ))}
           </div>
-
-          {/* Back Button */}
-          <div className="p-4 border-t bg-background">
-            <Button variant="outline" className="w-full" onClick={() => navigate('/')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Kembali ke Beranda
-            </Button>
-          </div>
         </div>
       </MobileLayout>
     );
   }
 
-  // Step 2: Select Category
+  // Step 2: Select Category & Location
   if (step === 'select-category') {
     return (
-      <MobileLayout showBottomNav={false}>
-        <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">
+      <MobileLayout>
+        <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background pb-24">
           {/* Header with selected item */}
           <div className="p-4 border-b bg-background">
             <div className="flex items-center gap-3">
@@ -406,30 +453,110 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
           </div>
 
           {/* Category Header */}
-          <div className="p-6 text-center">
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="h-8 w-8 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold mb-2">Cari Kategori Apa?</h1>
-            <p className="text-muted-foreground">
+          <div className="p-4 text-center">
+            <h1 className="text-xl font-bold mb-1">Cari Kategori Apa?</h1>
+            <p className="text-sm text-muted-foreground">
               Pilih kategori barang yang kamu inginkan
             </p>
           </div>
 
           {/* Category Grid */}
-          <div className="px-4 pb-6 grid grid-cols-2 gap-3">
+          <div className="px-4 pb-4 grid grid-cols-3 gap-2">
             {CATEGORY_OPTIONS.map((cat) => (
               <Card 
                 key={cat.value} 
-                className="cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] hover:border-primary"
-                onClick={() => handleSelectCategory(cat.value)}
+                className={`cursor-pointer transition-all hover:scale-[1.02] ${
+                  selectedCategory === cat.value 
+                    ? 'border-primary bg-primary/5 shadow-md' 
+                    : 'hover:border-primary/50'
+                }`}
+                onClick={() => setSelectedCategory(cat.value)}
               >
-                <CardContent className="p-4 text-center">
-                  <span className="text-3xl mb-2 block">{cat.icon}</span>
-                  <h3 className="font-medium text-sm">{cat.label}</h3>
+                <CardContent className="p-3 text-center">
+                  <span className="text-2xl mb-1 block">{cat.icon}</span>
+                  <h3 className="font-medium text-xs">{cat.label}</h3>
                 </CardContent>
               </Card>
             ))}
+          </div>
+
+          {/* Location Filter */}
+          <div className="px-4 pb-4">
+            <div className="p-4 bg-muted/50 rounded-xl space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                <MapPin className="h-4 w-4" />
+                Filter Lokasi (Opsional)
+              </div>
+              
+              {/* Province */}
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Provinsi</Label>
+                <Select value={selectedProvince} onValueChange={setSelectedProvince}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Semua Provinsi" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border shadow-lg z-50 max-h-60">
+                    <SelectItem value="">Semua Provinsi</SelectItem>
+                    {INDONESIA_LOCATIONS.map((p) => (
+                      <SelectItem key={p.name} value={p.name}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* City */}
+              {selectedProvince && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Kota/Kabupaten</Label>
+                  <Select value={selectedCity} onValueChange={setSelectedCity}>
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="Semua Kota" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border shadow-lg z-50 max-h-60">
+                      <SelectItem value="">Semua Kota</SelectItem>
+                      {availableCities.map((c) => (
+                        <SelectItem key={c.name} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* District */}
+              {selectedCity && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Kecamatan</Label>
+                  <Select value={selectedDistrict} onValueChange={setSelectedDistrict}>
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="Semua Kecamatan" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border shadow-lg z-50 max-h-60">
+                      <SelectItem value="">Semua Kecamatan</SelectItem>
+                      {availableDistricts.map((d) => (
+                        <SelectItem key={d.name} value={d.name}>
+                          {d.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Start Button */}
+          <div className="px-4 pb-6">
+            <Button 
+              className="w-full h-12 text-lg gap-2" 
+              onClick={handleStartSwipe}
+            >
+              Mulai Swipe
+              <ArrowRight className="h-5 w-5" />
+            </Button>
           </div>
         </div>
       </MobileLayout>
@@ -441,10 +568,10 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
   const selectedCategoryLabel = CATEGORY_OPTIONS.find(c => c.value === selectedCategory)?.label || 'Semua';
 
   return (
-    <MobileLayout showBottomNav={false}>
-      <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background flex flex-col">
+    <MobileLayout>
+      <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background flex flex-col pb-20">
         {/* Compact Header */}
-        <div className="p-3 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="p-3 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-40">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <img
@@ -454,9 +581,15 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
               />
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground truncate">{selectedUserItem?.name}</p>
-                <Badge variant="secondary" className="text-xs">
-                  {selectedCategoryLabel}
-                </Badge>
+                <div className="flex items-center gap-1 flex-wrap">
+                  <Badge variant="secondary" className="text-[10px]">
+                    {selectedCategoryLabel}
+                  </Badge>
+                  <Badge variant="outline" className="text-[10px]">
+                    <MapPin className="h-2.5 w-2.5 mr-0.5" />
+                    {getLocationLabel()}
+                  </Badge>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -471,11 +604,11 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
         </div>
 
         {/* Swipe Area */}
-        <main className="flex-1 flex items-center justify-center p-4">
+        <main className="flex-1 flex items-center justify-center p-3">
           {loading ? (
             <div className="animate-spin h-16 w-16 border-4 border-primary border-t-transparent rounded-full"></div>
           ) : currentItem ? (
-            <div className="w-full max-w-sm h-[500px] sm:h-[550px]">
+            <div className="w-full max-w-sm">
               <SwipeCard
                 key={currentItem.id}
                 item={currentItem}
@@ -489,39 +622,17 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
                 <Sparkles className="h-10 w-10 text-muted-foreground" />
               </div>
               <h2 className="text-xl font-bold">Tidak ada barang lagi!</h2>
-              <p className="text-muted-foreground text-sm">
-                Kamu sudah melihat semua barang di kategori ini.
+              <p className="text-muted-foreground">
+                Coba ubah filter kategori atau lokasi
               </p>
-              <div className="flex flex-col gap-2">
-                <Button onClick={loadItems} variant="outline">
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Muat Ulang
-                </Button>
-                <Button onClick={handleChangeSettings}>
-                  Ganti Kategori / Barang
-                </Button>
-              </div>
+              <Button onClick={handleChangeSettings} className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Ubah Filter
+              </Button>
             </div>
           )}
         </main>
-
-        {/* Swipe Instructions */}
-        {currentItem && (
-          <div className="p-4 text-center text-xs text-muted-foreground">
-            <span>← Skip</span>
-            <span className="mx-4">↑ Wishlist</span>
-            <span>Tertarik →</span>
-          </div>
-        )}
       </div>
-
-      <UpgradeModal
-        open={showUpgradeModal}
-        onOpenChange={setShowUpgradeModal}
-        limitType="swipe"
-        currentCount={usage.swipe_count}
-        maxCount={limits.daily_swipes}
-      />
     </MobileLayout>
   );
 }

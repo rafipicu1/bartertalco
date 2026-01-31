@@ -359,6 +359,210 @@ export const INDONESIA_LOCATIONS: Province[] = [
       },
     ],
   },
+  {
+    name: "Sumatera Barat",
+    cities: [
+      {
+        name: "Padang",
+        districts: [
+          { name: "Padang Barat" },
+          { name: "Padang Timur" },
+          { name: "Padang Selatan" },
+          { name: "Padang Utara" },
+          { name: "Nanggalo" },
+          { name: "Kuranji" },
+          { name: "Pauh" },
+          { name: "Lubuk Begalung" },
+          { name: "Lubuk Kilangan" },
+          { name: "Koto Tangah" },
+        ],
+      },
+      {
+        name: "Bukittinggi",
+        districts: [
+          { name: "Guguk Panjang" },
+          { name: "Mandiangin Koto Selayan" },
+          { name: "Aur Birugo Tigo Baleh" },
+        ],
+      },
+    ],
+  },
+  {
+    name: "Sumatera Selatan",
+    cities: [
+      {
+        name: "Palembang",
+        districts: [
+          { name: "Ilir Barat I" },
+          { name: "Ilir Barat II" },
+          { name: "Ilir Timur I" },
+          { name: "Ilir Timur II" },
+          { name: "Ilir Timur III" },
+          { name: "Seberang Ulu I" },
+          { name: "Seberang Ulu II" },
+          { name: "Sukarami" },
+          { name: "Alang-Alang Lebar" },
+          { name: "Gandus" },
+        ],
+      },
+    ],
+  },
+  {
+    name: "Riau",
+    cities: [
+      {
+        name: "Pekanbaru",
+        districts: [
+          { name: "Sukajadi" },
+          { name: "Pekanbaru Kota" },
+          { name: "Sail" },
+          { name: "Lima Puluh" },
+          { name: "Senapelan" },
+          { name: "Rumbai" },
+          { name: "Bukit Raya" },
+          { name: "Marpoyan Damai" },
+          { name: "Tenayan Raya" },
+          { name: "Payung Sekaki" },
+        ],
+      },
+    ],
+  },
+  {
+    name: "Lampung",
+    cities: [
+      {
+        name: "Bandar Lampung",
+        districts: [
+          { name: "Tanjung Karang Pusat" },
+          { name: "Tanjung Karang Timur" },
+          { name: "Tanjung Karang Barat" },
+          { name: "Teluk Betung Selatan" },
+          { name: "Teluk Betung Utara" },
+          { name: "Sukarame" },
+          { name: "Sukabumi" },
+          { name: "Kedaton" },
+          { name: "Rajabasa" },
+          { name: "Tanjung Senang" },
+        ],
+      },
+    ],
+  },
+  {
+    name: "Kalimantan Selatan",
+    cities: [
+      {
+        name: "Banjarmasin",
+        districts: [
+          { name: "Banjarmasin Barat" },
+          { name: "Banjarmasin Timur" },
+          { name: "Banjarmasin Selatan" },
+          { name: "Banjarmasin Utara" },
+          { name: "Banjarmasin Tengah" },
+        ],
+      },
+      {
+        name: "Banjarbaru",
+        districts: [
+          { name: "Landasan Ulin" },
+          { name: "Cempaka" },
+          { name: "Banjarbaru Utara" },
+          { name: "Banjarbaru Selatan" },
+          { name: "Liang Anggang" },
+        ],
+      },
+    ],
+  },
+  {
+    name: "Sulawesi Utara",
+    cities: [
+      {
+        name: "Manado",
+        districts: [
+          { name: "Wenang" },
+          { name: "Sario" },
+          { name: "Wanea" },
+          { name: "Tikala" },
+          { name: "Mapanget" },
+          { name: "Singkil" },
+          { name: "Tuminting" },
+          { name: "Bunaken" },
+          { name: "Malalayang" },
+        ],
+      },
+    ],
+  },
+  {
+    name: "Nusa Tenggara Barat",
+    cities: [
+      {
+        name: "Mataram",
+        districts: [
+          { name: "Ampenan" },
+          { name: "Sekarbela" },
+          { name: "Mataram" },
+          { name: "Selaparang" },
+          { name: "Cakranegara" },
+          { name: "Sandubaya" },
+        ],
+      },
+      {
+        name: "Lombok Barat",
+        districts: [
+          { name: "Gerung" },
+          { name: "Labuapi" },
+          { name: "Kediri" },
+          { name: "Kuripan" },
+          { name: "Narmada" },
+          { name: "Lingsar" },
+          { name: "Gunungsari" },
+          { name: "Batulayar" },
+          { name: "Sekotong" },
+          { name: "Lembar" },
+        ],
+      },
+    ],
+  },
+  {
+    name: "Kepulauan Riau",
+    cities: [
+      {
+        name: "Batam",
+        districts: [
+          { name: "Batam Kota" },
+          { name: "Bengkong" },
+          { name: "Batu Aji" },
+          { name: "Batu Ampar" },
+          { name: "Lubuk Baja" },
+          { name: "Nongsa" },
+          { name: "Sagulung" },
+          { name: "Sekupang" },
+          { name: "Sei Beduk" },
+          { name: "Galang" },
+          { name: "Bulang" },
+          { name: "Belakang Padang" },
+        ],
+      },
+    ],
+  },
+  {
+    name: "Aceh",
+    cities: [
+      {
+        name: "Banda Aceh",
+        districts: [
+          { name: "Baiturrahman" },
+          { name: "Kuta Alam" },
+          { name: "Meuraxa" },
+          { name: "Syiah Kuala" },
+          { name: "Lueng Bata" },
+          { name: "Kuta Raja" },
+          { name: "Banda Raya" },
+          { name: "Jaya Baru" },
+          { name: "Ulee Kareng" },
+        ],
+      },
+    ],
+  },
 ];
 
 export const getProvince = (provinceName: string): Province | undefined => {
