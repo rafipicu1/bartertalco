@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { SwipeCard } from '@/components/SwipeCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, User, Plus, Heart, Home, Filter, X } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Sparkles, Plus, ArrowRight, ArrowLeft, RefreshCw, Package, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { MobileLayout } from '@/components/MobileLayout';
@@ -12,24 +13,26 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { UpgradeModal } from '@/components/UpgradeModal';
 
 const CATEGORY_OPTIONS = [
-  { value: 'all', label: 'Semua' },
-  { value: 'elektronik', label: 'Elektronik' },
-  { value: 'kendaraan', label: 'Kendaraan' },
-  { value: 'properti', label: 'Properti' },
-  { value: 'fashion', label: 'Fashion' },
-  { value: 'hobi_koleksi', label: 'Hobi & Koleksi' },
-  { value: 'olahraga', label: 'Olahraga' },
-  { value: 'musik', label: 'Musik' },
-  { value: 'gaming', label: 'Gaming' },
-  { value: 'perlengkapan_rumah', label: 'Rumah Tangga' },
-  { value: 'mainan_anak', label: 'Mainan & Anak' },
-  { value: 'kantor_industri', label: 'Kantor & Industri' },
-  { value: 'kesehatan_kecantikan', label: 'Kesehatan' },
-  { value: 'other', label: 'Lainnya' },
+  { value: 'all', label: 'Semua Kategori', icon: '🔍' },
+  { value: 'elektronik', label: 'Elektronik', icon: '📱' },
+  { value: 'kendaraan', label: 'Kendaraan', icon: '🏍️' },
+  { value: 'properti', label: 'Properti', icon: '🏠' },
+  { value: 'fashion', label: 'Fashion', icon: '👕' },
+  { value: 'hobi_koleksi', label: 'Hobi & Koleksi', icon: '🎨' },
+  { value: 'olahraga', label: 'Olahraga', icon: '⚽' },
+  { value: 'musik', label: 'Musik', icon: '🎸' },
+  { value: 'gaming', label: 'Gaming', icon: '🎮' },
+  { value: 'perlengkapan_rumah', label: 'Rumah Tangga', icon: '🏡' },
+  { value: 'mainan_anak', label: 'Mainan & Anak', icon: '🧸' },
+  { value: 'kantor_industri', label: 'Kantor & Industri', icon: '💼' },
+  { value: 'kesehatan_kecantikan', label: 'Kesehatan', icon: '💊' },
+  { value: 'other', label: 'Lainnya', icon: '📦' },
 ];
 
+type SwipeStep = 'select-item' | 'select-category' | 'swipe';
+
 export default function Swipe() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [items, setItems] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -39,6 +42,7 @@ export default function Swipe() {
   const [selectedUserItem, setSelectedUserItem] = useState<any | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [step, setStep] = useState<SwipeStep>('select-item');
   
   const { canSwipe, incrementUsage, getRemainingSwipes, usage, limits } = useSubscription();
 
@@ -47,11 +51,11 @@ export default function Swipe() {
   }, [user]);
 
   useEffect(() => {
-    if (selectedUserItem) {
+    if (step === 'swipe' && selectedUserItem) {
       setLoading(true);
       loadItems();
     }
-  }, [selectedUserItem, selectedCategory]);
+  }, [step, selectedUserItem, selectedCategory]);
 
   const loadUserItems = async () => {
     if (!user) return;
@@ -65,14 +69,11 @@ export default function Swipe() {
 
       if (error) throw error;
       setUserItems(data || []);
-      
-      // Auto-select first item if available
-      if (data && data.length > 0 && !selectedUserItem) {
-        setSelectedUserItem(data[0]);
-      }
     } catch (error) {
       console.error('Error loading user items:', error);
       toast.error('Gagal memuat barang kamu');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -80,7 +81,6 @@ export default function Swipe() {
     if (!user || !selectedUserItem) return;
 
     try {
-      // Get items that the user hasn't swiped on yet with this specific item
       const { data: swipedItems } = await supabase
         .from('swipes')
         .select('item_id')
@@ -89,7 +89,6 @@ export default function Swipe() {
 
       const swipedIds = swipedItems?.map(s => s.item_id) || [];
 
-      // Get liked items for this specific user item
       const { data: likedItems } = await supabase
         .from('swipes')
         .select('item_id')
@@ -99,7 +98,6 @@ export default function Swipe() {
       
       setLikedItemIds(new Set(likedItems?.map(s => s.item_id) || []));
 
-      // Try to get personalized feed first
       const { data: feedData } = await supabase
         .rpc('get_personalized_feed', {
           p_user_id: user.id,
@@ -124,17 +122,14 @@ export default function Swipe() {
         .eq('is_active', true)
         .neq('user_id', user.id);
 
-      // Apply category filter if selected
       if (selectedCategory && selectedCategory !== 'all') {
         query = query.eq('category', selectedCategory as any);
       }
 
-      // If we have personalized items and no category filter, use those
       if (itemIds.length > 0 && selectedCategory === 'all') {
         query = query.in('id', itemIds);
       }
 
-      // Only filter out swiped items if there are any
       if (swipedIds.length > 0) {
         query = query.not('id', 'in', `(${swipedIds.join(',')})`);
       }
@@ -155,7 +150,6 @@ export default function Swipe() {
   const handleSwipe = async (direction: 'left' | 'right' | 'up') => {
     if (!user || !selectedUserItem || currentIndex >= items.length) return;
 
-    // Check swipe limit
     if (!canSwipe()) {
       setShowUpgradeModal(true);
       return;
@@ -164,11 +158,9 @@ export default function Swipe() {
     const currentItem = items[currentIndex];
 
     try {
-      // Increment usage
       await incrementUsage('swipe');
 
       if (direction === 'up') {
-        // Add to wishlist
         await supabase
           .from('wishlist')
           .insert({
@@ -179,7 +171,6 @@ export default function Swipe() {
       }
 
       if (direction === 'right' || direction === 'left') {
-        // Record swipe with user's item (upsert to handle duplicates)
         const { error } = await supabase
           .from('swipes')
           .upsert({
@@ -194,11 +185,9 @@ export default function Swipe() {
         if (error && error.code !== '23505') throw error;
 
         if (direction === 'right') {
-          // Check if there's a mutual like (the other person also liked our item)
           const itemOwnerId = currentItem.user_id || currentItem.profiles?.user_id;
           
           if (itemOwnerId) {
-            // Check if the other person has swiped right on our item
             const { data: mutualSwipe } = await supabase
               .from('swipes')
               .select('*')
@@ -208,7 +197,6 @@ export default function Swipe() {
               .maybeSingle();
 
             if (mutualSwipe) {
-              // It's a match! Create or find conversation
               const { data: existingConvo } = await supabase
                 .from('conversations')
                 .select('id')
@@ -233,7 +221,6 @@ export default function Swipe() {
               }
 
               if (conversationId) {
-                // Send match message
                 const formatPrice = (value: number) => {
                   return new Intl.NumberFormat('id-ID', {
                     style: 'currency',
@@ -259,7 +246,6 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
                     message_type: 'match_notification',
                   });
 
-                // Navigate directly to chat
                 toast.success("🎉 Match! Kalian saling suka!", {
                   description: 'Membuka chat...',
                 });
@@ -271,7 +257,7 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
                     isMatch: true,
                   }
                 });
-                return; // Don't increment index, we're navigating away
+                return;
               }
             }
           }
@@ -285,185 +271,249 @@ Yuk lanjutkan diskusi untuk barter! 👇`;
     }
   };
 
-  if (loading) {
+  const handleSelectItem = (item: any) => {
+    setSelectedUserItem(item);
+    setStep('select-category');
+  };
+
+  const handleSelectCategory = (category: string) => {
+    setSelectedCategory(category);
+    setStep('swipe');
+  };
+
+  const handleChangeSettings = () => {
+    setStep('select-item');
+    setItems([]);
+    setCurrentIndex(0);
+  };
+
+  const formatPrice = (value: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+    }).format(value);
+  };
+
+  // Loading state
+  if (loading && step === 'select-item') {
     return (
-      <div className="min-h-screen bg-gradient-rainbow flex items-center justify-center">
-        <div className="animate-spin h-16 w-16 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
+      <MobileLayout showBottomNav={false}>
+        <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background flex items-center justify-center">
+          <div className="animate-spin h-16 w-16 border-4 border-primary border-t-transparent rounded-full"></div>
+        </div>
+      </MobileLayout>
     );
   }
 
-  const currentItem = items[currentIndex];
-
-  return (
-    <MobileLayout>
-      {/* Header */}
-      <header className="bg-card border-b border-border sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-white" />
+  // Step 1: Select Item
+  if (step === 'select-item') {
+    if (userItems.length === 0) {
+      return (
+        <MobileLayout showBottomNav={false}>
+          <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background flex flex-col items-center justify-center p-6 text-center">
+            <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+              <Package className="h-12 w-12 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              BARTR
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/')}
-              className="rounded-full"
-            >
-              <Home className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/upload')}
-              className="rounded-full"
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/wishlist')}
-              className="rounded-full"
-            >
-              <Heart className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/profile')}
-              className="rounded-full"
-            >
-              <User className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Swipe Area */}
-      <main className="container mx-auto px-4 py-4 sm:py-8 max-w-md overflow-x-hidden">
-        {/* User Items Selector */}
-        {userItems.length === 0 ? (
-          <div className="mb-4 p-6 bg-primary/5 border border-primary/20 rounded-xl text-center space-y-3">
-            <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
-              <Plus className="h-8 w-8 text-primary" />
-            </div>
-            <h3 className="font-semibold text-lg">Yuk Mulai Barter! 🔄</h3>
-            <p className="text-sm text-muted-foreground">
-              Untuk mulai swipe dan cari barang yang kamu mau, kamu perlu pasang barang dulu untuk ditukar.
+            <h1 className="text-2xl font-bold mb-2">Belum Ada Barang</h1>
+            <p className="text-muted-foreground mb-6 max-w-xs">
+              Untuk mulai swipe, kamu perlu pasang barang dulu yang mau ditukar.
             </p>
-            <Button onClick={() => navigate('/upload')} className="bg-gradient-primary">
-              <Plus className="h-4 w-4 mr-2" />
-              Pasang Barang Pertama
+            <Button onClick={() => navigate('/upload')} size="lg" className="gap-2">
+              <Plus className="h-5 w-5" />
+              Pasang Barang
+            </Button>
+            <Button variant="ghost" onClick={() => navigate('/')} className="mt-4">
+              Kembali ke Beranda
             </Button>
           </div>
-        ) : (
-          <div className="mb-4">
-            <label className="text-sm font-medium mb-2 block">
-              Barang yang mau kamu tukar:
-            </label>
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {userItems.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => setSelectedUserItem(item)}
-                  className={`flex-shrink-0 w-32 cursor-pointer rounded-lg border-2 transition-all ${
-                    selectedUserItem?.id === item.id
-                      ? 'border-primary shadow-lg scale-105'
-                      : 'border-border hover:border-primary/50'
-                  }`}
-                >
+        </MobileLayout>
+      );
+    }
+
+    return (
+      <MobileLayout showBottomNav={false}>
+        <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">
+          {/* Header */}
+          <div className="p-6 text-center">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Package className="h-8 w-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold mb-2">Pilih Barangmu</h1>
+            <p className="text-muted-foreground">
+              Barang mana yang mau kamu tukar?
+            </p>
+          </div>
+
+          {/* Items Grid */}
+          <div className="px-4 pb-6 grid grid-cols-2 gap-3">
+            {userItems.map((item) => (
+              <Card 
+                key={item.id} 
+                className="cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] overflow-hidden"
+                onClick={() => handleSelectItem(item)}
+              >
+                <div className="aspect-square relative">
                   <img
                     src={item.photos[0]}
                     alt={item.name}
-                    className="w-full h-24 object-cover rounded-t-lg"
+                    className="w-full h-full object-cover"
                   />
-                  <div className="p-2">
-                    <p className="text-xs font-medium truncate">{item.name}</p>
-                  </div>
                 </div>
-              ))}
-            </div>
-            {selectedUserItem && (
-              <div className="flex items-center justify-between mt-2">
-                <p className="text-xs text-muted-foreground">
-                  Rekomendasi barang untukmu ✨
-                </p>
-                <p className="text-xs font-medium text-primary">
-                  Swipe: {getRemainingSwipes()} tersisa
-                </p>
+                <CardContent className="p-3">
+                  <h3 className="font-semibold text-sm truncate">{item.name}</h3>
+                  <p className="text-xs text-primary font-medium mt-1">
+                    {formatPrice(item.estimated_value)}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        )}
 
-        {/* Category Filter */}
-        {selectedUserItem && (
-          <div className="mb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Filter Kategori:</span>
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {CATEGORY_OPTIONS.map((cat) => (
-                <Badge
-                  key={cat.value}
-                  variant={selectedCategory === cat.value ? 'default' : 'outline'}
-                  className={`cursor-pointer whitespace-nowrap flex-shrink-0 transition-all ${
-                    selectedCategory === cat.value
-                      ? 'bg-primary text-primary-foreground'
-                      : 'hover:bg-accent hover:text-accent-foreground'
-                  }`}
-                  onClick={() => setSelectedCategory(cat.value)}
-                >
-                  {cat.label}
-                  {selectedCategory === cat.value && cat.value !== 'all' && (
-                    <X 
-                      className="ml-1 h-3 w-3" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedCategory('all');
-                      }}
-                    />
-                  )}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-          </div>
-        )}
-
-        {selectedUserItem && currentItem ? (
-          <div className="relative h-[500px] sm:h-[600px] max-w-full overflow-hidden">
-            <SwipeCard
-              key={currentItem.id}
-              item={currentItem}
-              onSwipe={handleSwipe}
-              isLiked={likedItemIds.has(currentItem.id)}
-            />
-          </div>
-        ) : selectedUserItem && !currentItem ? (
-          <div className="flex flex-col items-center justify-center h-[400px] sm:h-[600px] text-center space-y-4 px-4">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-muted rounded-full flex items-center justify-center">
-              <Sparkles className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground" />
-            </div>
-            <h2 className="text-xl sm:text-2xl font-bold">Tidak ada barang lagi!</h2>
-            <p className="text-muted-foreground max-w-sm text-sm sm:text-base">
-              Kamu sudah melihat semua barang yang tersedia. Coba lagi nanti!
-            </p>
-            <Button
-              onClick={loadItems}
-              className="bg-gradient-to-r from-primary to-primary/80"
-            >
-              Muat Ulang
+          {/* Back Button */}
+          <div className="p-4 border-t bg-background">
+            <Button variant="outline" className="w-full" onClick={() => navigate('/')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Kembali ke Beranda
             </Button>
           </div>
-        ) : null}
-      </main>
+        </div>
+      </MobileLayout>
+    );
+  }
+
+  // Step 2: Select Category
+  if (step === 'select-category') {
+    return (
+      <MobileLayout showBottomNav={false}>
+        <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">
+          {/* Header with selected item */}
+          <div className="p-4 border-b bg-background">
+            <div className="flex items-center gap-3">
+              <img
+                src={selectedUserItem?.photos[0]}
+                alt={selectedUserItem?.name}
+                className="w-14 h-14 rounded-lg object-cover"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground">Menukar:</p>
+                <h3 className="font-semibold truncate">{selectedUserItem?.name}</h3>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setStep('select-item')}>
+                Ganti
+              </Button>
+            </div>
+          </div>
+
+          {/* Category Header */}
+          <div className="p-6 text-center">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search className="h-8 w-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold mb-2">Cari Kategori Apa?</h1>
+            <p className="text-muted-foreground">
+              Pilih kategori barang yang kamu inginkan
+            </p>
+          </div>
+
+          {/* Category Grid */}
+          <div className="px-4 pb-6 grid grid-cols-2 gap-3">
+            {CATEGORY_OPTIONS.map((cat) => (
+              <Card 
+                key={cat.value} 
+                className="cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] hover:border-primary"
+                onClick={() => handleSelectCategory(cat.value)}
+              >
+                <CardContent className="p-4 text-center">
+                  <span className="text-3xl mb-2 block">{cat.icon}</span>
+                  <h3 className="font-medium text-sm">{cat.label}</h3>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </MobileLayout>
+    );
+  }
+
+  // Step 3: Swipe Mode
+  const currentItem = items[currentIndex];
+  const selectedCategoryLabel = CATEGORY_OPTIONS.find(c => c.value === selectedCategory)?.label || 'Semua';
+
+  return (
+    <MobileLayout showBottomNav={false}>
+      <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background flex flex-col">
+        {/* Compact Header */}
+        <div className="p-3 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <img
+                src={selectedUserItem?.photos[0]}
+                alt={selectedUserItem?.name}
+                className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+              />
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground truncate">{selectedUserItem?.name}</p>
+                <Badge variant="secondary" className="text-xs">
+                  {selectedCategoryLabel}
+                </Badge>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                {getRemainingSwipes()} swipe
+              </Badge>
+              <Button variant="ghost" size="sm" onClick={handleChangeSettings}>
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Swipe Area */}
+        <main className="flex-1 flex items-center justify-center p-4">
+          {loading ? (
+            <div className="animate-spin h-16 w-16 border-4 border-primary border-t-transparent rounded-full"></div>
+          ) : currentItem ? (
+            <div className="w-full max-w-sm h-[500px] sm:h-[550px]">
+              <SwipeCard
+                key={currentItem.id}
+                item={currentItem}
+                onSwipe={handleSwipe}
+                isLiked={likedItemIds.has(currentItem.id)}
+              />
+            </div>
+          ) : (
+            <div className="text-center space-y-4 px-4">
+              <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto">
+                <Sparkles className="h-10 w-10 text-muted-foreground" />
+              </div>
+              <h2 className="text-xl font-bold">Tidak ada barang lagi!</h2>
+              <p className="text-muted-foreground text-sm">
+                Kamu sudah melihat semua barang di kategori ini.
+              </p>
+              <div className="flex flex-col gap-2">
+                <Button onClick={loadItems} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Muat Ulang
+                </Button>
+                <Button onClick={handleChangeSettings}>
+                  Ganti Kategori / Barang
+                </Button>
+              </div>
+            </div>
+          )}
+        </main>
+
+        {/* Swipe Instructions */}
+        {currentItem && (
+          <div className="p-4 text-center text-xs text-muted-foreground">
+            <span>← Skip</span>
+            <span className="mx-4">↑ Wishlist</span>
+            <span>Tertarik →</span>
+          </div>
+        )}
+      </div>
 
       <UpgradeModal
         open={showUpgradeModal}
