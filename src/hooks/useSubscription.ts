@@ -188,12 +188,65 @@ export function useSubscription() {
       .eq('is_active', true);
 
     if (error) return false;
-    return (data?.length || 0) < totalAllowedItems;
+    const currentCount = data?.length || 0;
+    
+    // Allow if under total limit (base + extra slots)
+    // OR if user has extra slots available (for users who already exceeded base limit before system)
+    return currentCount < totalAllowedItems || extraSlots > 0;
+  };
+
+  // Consume an extra post slot after successful upload
+  const consumeExtraPostSlot = async (): Promise<boolean> => {
+    if (!user) return false;
+    
+    const extraSlots = subscription?.extra_post_slots || 0;
+    if (extraSlots <= 0) return false;
+    
+    const { error } = await supabase
+      .from('user_subscriptions')
+      .update({ 
+        extra_post_slots: extraSlots - 1,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', user.id);
+    
+    if (!error) {
+      await loadSubscription();
+      return true;
+    }
+    return false;
+  };
+
+  // Consume extra swipe/proposal slots when user exceeds daily limit
+  const consumeExtraSlot = async (type: 'swipe' | 'proposal'): Promise<boolean> => {
+    if (!user) return false;
+    
+    const slotField = type === 'swipe' ? 'extra_swipe_slots' : 'extra_proposal_slots';
+    const extraSlots = type === 'swipe' 
+      ? (subscription?.extra_swipe_slots || 0) 
+      : (subscription?.extra_proposal_slots || 0);
+    
+    if (extraSlots <= 0) return false;
+    
+    const { error } = await supabase
+      .from('user_subscriptions')
+      .update({ 
+        [slotField]: extraSlots - 1,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', user.id);
+    
+    if (!error) {
+      await loadSubscription();
+      return true;
+    }
+    return false;
   };
 
   const incrementUsage = async (type: 'swipe' | 'proposal' | 'view') => {
     if (!user) return;
 
+    const limits = getLimits();
     const today = new Date().toISOString().split('T')[0];
     
     // First try to insert
@@ -218,14 +271,30 @@ export function useSubscription() {
         .single();
 
       if (current) {
+        const newCount = ((current as any)[column] || 0) + 1;
+        
         await supabase
           .from('user_daily_usage')
           .update({
-            [column]: ((current as any)[column] || 0) + 1,
+            [column]: newCount,
             updated_at: new Date().toISOString(),
           })
           .eq('user_id', user.id)
           .eq('usage_date', today);
+
+        // Check if this usage exceeds daily limit - consume extra slot if needed
+        if (type === 'swipe' && newCount > limits.daily_swipes) {
+          await consumeExtraSlot('swipe');
+        } else if (type === 'proposal' && newCount > limits.daily_proposals) {
+          await consumeExtraSlot('proposal');
+        }
+      }
+    } else {
+      // First usage of the day - check if already exceeding limit (shouldn't happen but safety check)
+      if (type === 'swipe' && 1 > limits.daily_swipes) {
+        await consumeExtraSlot('swipe');
+      } else if (type === 'proposal' && 1 > limits.daily_proposals) {
+        await consumeExtraSlot('proposal');
       }
     }
 
@@ -254,6 +323,8 @@ export function useSubscription() {
     canSwipe,
     canPropose,
     canUploadItem,
+    consumeExtraPostSlot,
+    consumeExtraSlot,
     incrementUsage,
     getRemainingSwipes,
     getRemainingProposals,
