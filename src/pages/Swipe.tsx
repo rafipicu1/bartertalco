@@ -158,7 +158,8 @@ export default function Swipe() {
           *,
           profiles:user_id (
             username,
-            location
+            location,
+            profile_photo_url
           )
         `)
         .eq('is_active', true)

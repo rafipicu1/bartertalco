@@ -302,7 +302,19 @@ Apakah kamu tertarik? Bisa nego kok! 😊`;
 
             <div className="flex items-center justify-between border-t pt-4">
               <div className="flex items-center gap-2">
-                <User className="h-5 w-5 text-muted-foreground" />
+                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                  {item.profiles?.profile_photo_url ? (
+                    <img 
+                      src={item.profiles.profile_photo_url} 
+                      alt={item.profiles.username}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                      <User className="h-4 w-4 text-primary-foreground" />
+                    </div>
+                  )}
+                </div>
                 <span className="font-medium">{item.profiles?.username || 'User'}</span>
               </div>
               {user && user.id !== item.user_id && (
