@@ -250,6 +250,49 @@ serve(async (req) => {
             }, {
               onConflict: 'user_id',
             })
+        } else if (transaction.transaction_type === 'single_post') {
+          // Add 1 extra post slot for single_post purchase
+          console.log('Processing single_post for user:', transaction.user_id)
+          
+          // First check if user has subscription record
+          const { data: existingSub } = await supabase
+            .from('user_subscriptions')
+            .select('extra_post_slots')
+            .eq('user_id', transaction.user_id)
+            .single()
+          
+          if (existingSub) {
+            // Update existing - increment extra_post_slots
+            const { error: updateError } = await supabase
+              .from('user_subscriptions')
+              .update({
+                extra_post_slots: (existingSub.extra_post_slots || 0) + 1,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('user_id', transaction.user_id)
+            
+            if (updateError) {
+              console.error('Error updating extra_post_slots:', updateError)
+            } else {
+              console.log('Successfully added extra_post_slot for user:', transaction.user_id)
+            }
+          } else {
+            // Create new subscription record with 1 extra slot
+            const { error: insertError } = await supabase
+              .from('user_subscriptions')
+              .insert({
+                user_id: transaction.user_id,
+                tier: 'free',
+                status: 'active',
+                extra_post_slots: 1,
+              })
+            
+            if (insertError) {
+              console.error('Error creating subscription with extra_post_slots:', insertError)
+            } else {
+              console.log('Successfully created subscription with extra_post_slot for user:', transaction.user_id)
+            }
+          }
         } else if (transaction.transaction_type === 'boost') {
           // Extract item_id from metadata if available
           const itemId = notification.metadata?.item_id

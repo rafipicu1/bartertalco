@@ -25,6 +25,7 @@ interface Subscription {
   tier: SubscriptionTier;
   status: string;
   expires_at: string | null;
+  extra_post_slots: number;
 }
 
 const FREE_LIMITS: TierLimits = {
@@ -93,20 +94,21 @@ export function useSubscription() {
       if (data) {
         // Check if subscription is expired
         if (data.expires_at && new Date(data.expires_at) < new Date()) {
-          setSubscription({ tier: 'free', status: 'expired', expires_at: null });
+          setSubscription({ tier: 'free', status: 'expired', expires_at: null, extra_post_slots: (data as any).extra_post_slots || 0 });
         } else {
           setSubscription({
             tier: data.tier as SubscriptionTier,
             status: data.status,
             expires_at: data.expires_at,
+            extra_post_slots: (data as any).extra_post_slots || 0,
           });
         }
       } else {
-        setSubscription({ tier: 'free', status: 'active', expires_at: null });
+        setSubscription({ tier: 'free', status: 'active', expires_at: null, extra_post_slots: 0 });
       }
     } catch (error) {
       console.error('Error loading subscription:', error);
-      setSubscription({ tier: 'free', status: 'active', expires_at: null });
+      setSubscription({ tier: 'free', status: 'active', expires_at: null, extra_post_slots: 0 });
     } finally {
       setLoading(false);
     }
@@ -163,6 +165,9 @@ export function useSubscription() {
     if (!user) return false;
     
     const limits = getLimits();
+    const extraSlots = subscription?.extra_post_slots || 0;
+    const totalAllowedItems = limits.active_items + extraSlots;
+    
     const { data, error } = await supabase
       .from('items')
       .select('id', { count: 'exact' })
@@ -170,7 +175,7 @@ export function useSubscription() {
       .eq('is_active', true);
 
     if (error) return false;
-    return (data?.length || 0) < limits.active_items;
+    return (data?.length || 0) < totalAllowedItems;
   };
 
   const incrementUsage = async (type: 'swipe' | 'proposal' | 'view') => {
