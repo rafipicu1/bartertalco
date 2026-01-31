@@ -7,13 +7,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, LogOut, Plus, Edit, MapPin, Camera, Save, Trash2, Shield, Crown, Loader2 } from 'lucide-react';
+import { ArrowLeft, LogOut, Plus, Edit, MapPin, Camera, Save, Trash2, Shield, Crown, Loader2, TrendingUp, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { MobileLayout } from '@/components/MobileLayout';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { LocationSelector } from '@/components/LocationSelector';
 import { useSubscription } from '@/hooks/useSubscription';
 import { SubscriptionBadge } from '@/components/SubscriptionBadge';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 export default function Profile() {
   const { user, signOut } = useAuth();
@@ -26,6 +27,7 @@ export default function Profile() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { tier, limits, usage, subscription } = useSubscription();
+  const [selectedItem, setSelectedItem] = useState<any>(null);
   const [editForm, setEditForm] = useState({
     username: '',
     full_name: '',
@@ -130,22 +132,6 @@ export default function Profile() {
       loadProfile();
     } catch (error: any) {
       toast.error(error.message || 'Gagal memperbarui profil');
-    }
-  };
-
-  const handleToggleItemStatus = async (itemId: string, currentStatus: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('items')
-        .update({ is_active: !currentStatus })
-        .eq('id', itemId);
-
-      if (error) throw error;
-      
-      toast.success(currentStatus ? 'Barang dinonaktifkan' : 'Barang diaktifkan');
-      loadItems();
-    } catch (error) {
-      toast.error('Gagal mengubah status');
     }
   };
 
@@ -437,7 +423,11 @@ export default function Profile() {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
               {items.map((item) => (
-                <Card key={item.id} className="overflow-hidden">
+                <Card 
+                  key={item.id} 
+                  className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                  onClick={() => setSelectedItem(item)}
+                >
                   <div className="aspect-square relative">
                     <img
                       src={item.photos[0] || '/placeholder.svg'}
@@ -455,24 +445,18 @@ export default function Profile() {
                     <p className="text-sm font-bold text-primary mb-2">
                       {formatPrice(item.estimated_value)}
                     </p>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-xs h-8"
-                        onClick={() => handleToggleItemStatus(item.id, item.is_active)}
-                      >
-                        {item.is_active ? 'Nonaktifkan' : 'Aktifkan'}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive h-8 w-8 p-0"
-                        onClick={() => handleDeleteItem(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-destructive h-8 hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteItem(item.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Hapus
+                    </Button>
                   </CardContent>
                 </Card>
               ))}
@@ -530,6 +514,96 @@ export default function Profile() {
                 Simpan
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Item Detail Dialog (View Only) */}
+        <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{selectedItem?.name}</DialogTitle>
+            </DialogHeader>
+            
+            {selectedItem && (
+              <div className="space-y-4">
+                {/* Photos Carousel */}
+                <Carousel className="w-full">
+                  <CarouselContent>
+                    {selectedItem.photos.map((photo: string, index: number) => (
+                      <CarouselItem key={index}>
+                        <div className="aspect-square relative overflow-hidden rounded-lg bg-muted">
+                          <img
+                            src={photo}
+                            alt={`${selectedItem.name} - ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  {selectedItem.photos.length > 1 && (
+                    <>
+                      <CarouselPrevious />
+                      <CarouselNext />
+                    </>
+                  )}
+                </Carousel>
+
+                {/* Item Info */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-primary text-primary-foreground">{selectedItem.category}</Badge>
+                    <Badge variant="outline">{selectedItem.condition}</Badge>
+                    {!selectedItem.is_active && (
+                      <Badge variant="secondary">Nonaktif</Badge>
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">Estimasi Nilai</p>
+                    <p className="text-2xl font-bold text-primary">
+                      {formatPrice(selectedItem.estimated_value)}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <TrendingUp className="h-4 w-4" />
+                      Mau ditukar dengan
+                    </p>
+                    <p className="font-medium">{selectedItem.barter_preference}</p>
+                  </div>
+
+                  <div className="border-t pt-3">
+                    <h4 className="font-semibold mb-1">Deskripsi</h4>
+                    <p className="text-sm text-muted-foreground">{selectedItem.description}</p>
+                  </div>
+
+                  <div className="border-t pt-3">
+                    <h4 className="font-semibold mb-1 text-destructive">Kekurangan / Minus</h4>
+                    <p className="text-sm text-muted-foreground">{selectedItem.detailed_minus}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground border-t pt-3">
+                    <MapPin className="h-4 w-4" />
+                    <span>{selectedItem.location}</span>
+                  </div>
+                </div>
+
+                {/* Delete Button */}
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => {
+                    handleDeleteItem(selectedItem.id);
+                    setSelectedItem(null);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Hapus Barang
+                </Button>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
