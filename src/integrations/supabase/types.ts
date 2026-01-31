@@ -643,6 +643,8 @@ export type Database = {
           created_at: string | null
           expires_at: string | null
           extra_post_slots: number
+          extra_proposal_slots: number | null
+          extra_swipe_slots: number | null
           id: string
           midtrans_order_id: string | null
           midtrans_transaction_id: string | null
@@ -656,6 +658,8 @@ export type Database = {
           created_at?: string | null
           expires_at?: string | null
           extra_post_slots?: number
+          extra_proposal_slots?: number | null
+          extra_swipe_slots?: number | null
           id?: string
           midtrans_order_id?: string | null
           midtrans_transaction_id?: string | null
@@ -669,6 +673,8 @@ export type Database = {
           created_at?: string | null
           expires_at?: string | null
           extra_post_slots?: number
+          extra_proposal_slots?: number | null
+          extra_swipe_slots?: number | null
           id?: string
           midtrans_order_id?: string | null
           midtrans_transaction_id?: string | null

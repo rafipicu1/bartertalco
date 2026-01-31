@@ -26,6 +26,8 @@ interface Subscription {
   status: string;
   expires_at: string | null;
   extra_post_slots: number;
+  extra_proposal_slots: number;
+  extra_swipe_slots: number;
 }
 
 const FREE_LIMITS: TierLimits = {
@@ -94,21 +96,30 @@ export function useSubscription() {
       if (data) {
         // Check if subscription is expired
         if (data.expires_at && new Date(data.expires_at) < new Date()) {
-          setSubscription({ tier: 'free', status: 'expired', expires_at: null, extra_post_slots: (data as any).extra_post_slots || 0 });
+          setSubscription({ 
+            tier: 'free', 
+            status: 'expired', 
+            expires_at: null, 
+            extra_post_slots: (data as any).extra_post_slots || 0,
+            extra_proposal_slots: (data as any).extra_proposal_slots || 0,
+            extra_swipe_slots: (data as any).extra_swipe_slots || 0,
+          });
         } else {
           setSubscription({
             tier: data.tier as SubscriptionTier,
             status: data.status,
             expires_at: data.expires_at,
             extra_post_slots: (data as any).extra_post_slots || 0,
+            extra_proposal_slots: (data as any).extra_proposal_slots || 0,
+            extra_swipe_slots: (data as any).extra_swipe_slots || 0,
           });
         }
       } else {
-        setSubscription({ tier: 'free', status: 'active', expires_at: null, extra_post_slots: 0 });
+        setSubscription({ tier: 'free', status: 'active', expires_at: null, extra_post_slots: 0, extra_proposal_slots: 0, extra_swipe_slots: 0 });
       }
     } catch (error) {
       console.error('Error loading subscription:', error);
-      setSubscription({ tier: 'free', status: 'active', expires_at: null, extra_post_slots: 0 });
+      setSubscription({ tier: 'free', status: 'active', expires_at: null, extra_post_slots: 0, extra_proposal_slots: 0, extra_swipe_slots: 0 });
     } finally {
       setLoading(false);
     }
@@ -153,12 +164,14 @@ export function useSubscription() {
 
   const canSwipe = (): boolean => {
     const limits = getLimits();
-    return usage.swipe_count < limits.daily_swipes;
+    const extraSwipes = subscription?.extra_swipe_slots || 0;
+    return usage.swipe_count < (limits.daily_swipes + extraSwipes);
   };
 
   const canPropose = (): boolean => {
     const limits = getLimits();
-    return usage.proposal_count < limits.daily_proposals;
+    const extraProposals = subscription?.extra_proposal_slots || 0;
+    return usage.proposal_count < (limits.daily_proposals + extraProposals);
   };
 
   const canUploadItem = async (): Promise<boolean> => {
@@ -222,12 +235,14 @@ export function useSubscription() {
 
   const getRemainingSwipes = (): number => {
     const limits = getLimits();
-    return Math.max(0, limits.daily_swipes - usage.swipe_count);
+    const extraSwipes = subscription?.extra_swipe_slots || 0;
+    return Math.max(0, (limits.daily_swipes + extraSwipes) - usage.swipe_count);
   };
 
   const getRemainingProposals = (): number => {
     const limits = getLimits();
-    return Math.max(0, limits.daily_proposals - usage.proposal_count);
+    const extraProposals = subscription?.extra_proposal_slots || 0;
+    return Math.max(0, (limits.daily_proposals + extraProposals) - usage.proposal_count);
   };
 
   return {
