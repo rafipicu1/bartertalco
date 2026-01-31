@@ -63,8 +63,8 @@ export function BarterTypeDialog({ isOpen, onClose, onConfirm, myItem, targetIte
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-md mx-auto">
+        <DialogHeader className="text-center sm:text-left">
           <DialogTitle>Pilih Jenis Penawaran</DialogTitle>
           <DialogDescription>
             Bagaimana kamu mau menukar barang ini?
