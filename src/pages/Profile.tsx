@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, LogOut, Plus, Edit, MapPin, Camera, Save, Trash2, Shield, Crown } from 'lucide-react';
+import { ArrowLeft, LogOut, Plus, Edit, MapPin, Camera, Save, Trash2, Shield, Crown, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { MobileLayout } from '@/components/MobileLayout';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -23,6 +23,8 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [editingProfile, setEditingProfile] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { tier, limits, usage, subscription } = useSubscription();
   const [editForm, setEditForm] = useState({
     username: '',
@@ -165,6 +167,62 @@ export default function Profile() {
     }
   };
 
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('File harus berupa gambar');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Ukuran file maksimal 5MB');
+      return;
+    }
+
+    setUploadingPhoto(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/avatar.${fileExt}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      // Update profile with new photo URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ profile_photo_url: publicUrlData.publicUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      toast.success('Foto profil berhasil diperbarui');
+      loadProfile();
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast.error(error.message || 'Gagal mengupload foto');
+    } finally {
+      setUploadingPhoto(false);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const formatPrice = (value: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -216,11 +274,34 @@ export default function Profile() {
             <CardContent className="pt-6">
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
                 <div className="relative">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center text-white text-2xl sm:text-3xl font-bold">
-                    {profile?.username?.[0]?.toUpperCase() || 'U'}
-                  </div>
-                  <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white shadow-lg">
-                    <Camera className="h-4 w-4" />
+                  {profile?.profile_photo_url ? (
+                    <img 
+                      src={profile.profile_photo_url} 
+                      alt={profile?.username}
+                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center text-white text-2xl sm:text-3xl font-bold">
+                      {profile?.username?.[0]?.toUpperCase() || 'U'}
+                    </div>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingPhoto}
+                    className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white shadow-lg disabled:opacity-50"
+                  >
+                    {uploadingPhoto ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
                 <div className="flex-1 text-center sm:text-left">
