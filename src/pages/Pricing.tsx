@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Crown, Zap, Sparkles, ArrowLeft } from 'lucide-react';
+import { Check, Crown, Zap, Sparkles, ArrowLeft, Package } from 'lucide-react';
 import { MobileLayout } from '@/components/MobileLayout';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
@@ -70,8 +70,11 @@ const plans = [
 
 export default function Pricing() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { tier } = useSubscription();
   const [loading, setLoading] = useState<string | null>(null);
+  
+  const limitType = searchParams.get('limit');
 
   // Reset snap state when leaving the page
   useEffect(() => {
@@ -156,10 +159,21 @@ export default function Pricing() {
 
       <main className="container mx-auto px-4 py-6 pb-24 max-w-lg">
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold mb-2">Pilih Plan Kamu</h2>
-          <p className="text-muted-foreground">
-            Upgrade untuk fitur unlimited dan prioritas
-          </p>
+          {limitType === 'upload' ? (
+            <>
+              <h2 className="text-2xl font-bold mb-2">Limit Item Tercapai! 📦</h2>
+              <p className="text-muted-foreground">
+                Kamu sudah mencapai batas item aktif. Upgrade atau bayar per posting!
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-bold mb-2">Pilih Plan Kamu</h2>
+              <p className="text-muted-foreground">
+                Upgrade untuk fitur unlimited dan prioritas
+              </p>
+            </>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -254,6 +268,36 @@ export default function Pricing() {
             );
           })}
         </div>
+
+        {/* Single Post Payment Option */}
+        <Card className="mt-6 p-5 bg-green-500/5 border-green-500/20">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+              <Package className="h-5 w-5 text-green-500" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg">💡 Mau posting 1 barang aja?</h3>
+              <p className="text-sm text-muted-foreground">Tanpa perlu upgrade bulanan</p>
+            </div>
+            <div className="ml-auto text-right">
+              <p className="text-xl font-bold">Rp3.000</p>
+              <p className="text-xs text-muted-foreground">sekali bayar</p>
+            </div>
+          </div>
+          
+          <p className="text-sm text-muted-foreground mb-4">
+            Bayar sekali pakai untuk upload 1 item tambahan tanpa perlu berlangganan.
+          </p>
+          
+          <Button
+            variant="outline"
+            className="w-full border-green-500/50 hover:bg-green-500/10 text-green-700 dark:text-green-400"
+            onClick={() => handleSubscribe('single_post')}
+            disabled={loading !== null}
+          >
+            {loading === 'single_post' ? 'Memproses...' : 'Bayar Rp3.000 (1x Posting)'}
+          </Button>
+        </Card>
 
         <div className="mt-8 p-4 bg-muted rounded-lg">
           <h4 className="font-medium mb-2">💳 Metode Pembayaran</h4>

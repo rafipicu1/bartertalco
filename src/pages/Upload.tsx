@@ -12,7 +12,6 @@ import { LocationSelector } from '@/components/LocationSelector';
 import { toast } from 'sonner';
 import { ArrowLeft, Upload as UploadIcon, X } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
-import { UpgradeModal } from '@/components/UpgradeModal';
 
 const CATEGORIES = [
   { value: 'elektronik', label: 'Elektronik' },
@@ -44,9 +43,6 @@ export default function Upload() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [currentItemCount, setCurrentItemCount] = useState(0);
-  const [limitReached, setLimitReached] = useState(false);
   
   const { limits, canUploadItem } = useSubscription();
   
@@ -84,11 +80,9 @@ export default function Upload() {
       .eq('user_id', user.id)
       .eq('is_active', true);
     
-    setCurrentItemCount(data?.length || 0);
-    
     if (!canUpload) {
-      setLimitReached(true);
-      setShowUpgradeModal(true);
+      // Redirect to pricing page with limit info
+      navigate('/pricing?limit=upload');
     }
   };
 
@@ -398,20 +392,6 @@ export default function Upload() {
           </CardContent>
         </Card>
       </main>
-
-      <UpgradeModal
-        open={showUpgradeModal}
-        onOpenChange={(open) => {
-          setShowUpgradeModal(open);
-          // If they close without upgrading/paying and limit is reached, go back
-          if (!open && limitReached) {
-            navigate(-1);
-          }
-        }}
-        limitType="upload"
-        currentCount={currentItemCount}
-        maxCount={limits.active_items}
-      />
     </div>
   );
 }
