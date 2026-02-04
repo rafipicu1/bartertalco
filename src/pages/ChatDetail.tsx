@@ -15,6 +15,7 @@ import { BarterProposalCard } from "@/components/chat/BarterProposalCard";
 import { ItemProposalSelector } from "@/components/chat/ItemProposalSelector";
 import { ItemDetailModal } from "@/components/ItemDetailModal";
 import { MobileLayout } from "@/components/MobileLayout";
+import { PageHeader } from "@/components/PageHeader";
 import { ReportDialog } from "@/components/ReportDialog";
 import {
   DropdownMenu,
@@ -362,7 +363,8 @@ export default function ChatDetail() {
   if (loading) {
     return (
       <MobileLayout showBottomNav={false}>
-        <div className="min-h-screen bg-background flex items-center justify-center">
+        <PageHeader title="Chat" onBack={() => navigate('/chat')} />
+        <div className="flex-1 flex items-center justify-center py-20">
           <div className="animate-spin h-16 w-16 border-4 border-primary border-t-transparent rounded-full"></div>
         </div>
       </MobileLayout>
@@ -374,11 +376,11 @@ export default function ChatDetail() {
       <div className="min-h-screen bg-background flex flex-col overflow-x-hidden max-w-full">
         <header className="border-b bg-card sticky top-0 z-10 shadow-sm">
           <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/chat')}>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/chat')} className="rounded-full">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <Avatar className="h-10 w-10">
+              <Avatar className="h-9 w-9">
                 {conversation?.other_user?.profile_photo_url ? (
                   <img
                     src={conversation.other_user.profile_photo_url}
@@ -387,11 +389,11 @@ export default function ChatDetail() {
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                    <User className="h-5 w-5 text-primary-foreground" />
+                    <User className="h-4 w-4 text-primary-foreground" />
                   </div>
                 )}
               </Avatar>
-              <h1 className="text-lg font-bold">
+              <h1 className="text-base font-bold truncate">
                 {conversation?.other_user?.username || 'User'}
               </h1>
             </div>

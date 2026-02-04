@@ -12,7 +12,7 @@ export const MobileLayout = ({ children, showBottomNav = true }: MobileLayoutPro
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden max-w-full">
-      <div className={`overflow-x-hidden max-w-full ${showBottomNav && user ? "pb-20 md:pb-0" : ""}`}>
+      <div className={`overflow-x-hidden max-w-full ${showBottomNav && user ? "pb-20" : ""}`}>
         {children}
       </div>
       {showBottomNav && user && <BottomNav />}

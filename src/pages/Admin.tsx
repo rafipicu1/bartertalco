@@ -56,6 +56,8 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { UserDetailDialog } from '@/components/admin/UserDetailDialog';
 import { ItemDetailDialog } from '@/components/admin/ItemDetailDialog';
+import { MobileLayout } from '@/components/MobileLayout';
+import { PageHeader } from '@/components/PageHeader';
 
 interface Report {
   id: string;
@@ -702,9 +704,12 @@ export default function Admin() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <MobileLayout>
+        <PageHeader title="Admin Panel" icon={<Shield className="h-5 w-5" />} onBack={() => navigate('/')} />
+        <div className="flex-1 flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </MobileLayout>
     );
   }
 
@@ -727,20 +732,15 @@ export default function Admin() {
   const pendingReports = reports.filter(r => r.status === 'pending').length;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <Shield className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold">Admin Panel</h1>
-          </div>
-        </div>
-      </header>
+    <MobileLayout>
+      <div className="min-h-screen bg-background">
+        <PageHeader 
+          title="Admin Panel" 
+          icon={<Shield className="h-5 w-5" />}
+          onBack={() => navigate('/')}
+        />
 
-      <main className="container mx-auto px-4 py-6">
+        <main className="container mx-auto px-4 py-6">
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 mb-6 h-auto">
@@ -1358,6 +1358,7 @@ export default function Admin() {
         onOpenChange={(open) => !open && setViewingItem(null)}
         onToggleActive={toggleItemActive}
       />
-    </div>
+      </div>
+    </MobileLayout>
   );
 }

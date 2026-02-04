@@ -10,8 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LocationSelector } from '@/components/LocationSelector';
 import { toast } from 'sonner';
-import { ArrowLeft, Upload as UploadIcon, X } from 'lucide-react';
+import { Upload as UploadIcon, X } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
+import { MobileLayout } from '@/components/MobileLayout';
+import { PageHeader } from '@/components/PageHeader';
 
 const CATEGORIES = [
   { value: 'elektronik', label: 'Elektronik' },
@@ -211,22 +213,11 @@ export default function Upload() {
   };
 
   return (
-    <div className="min-h-screen bg-muted">
-      <header className="bg-card border-b border-border sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-            className="rounded-full"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-xl font-bold">Pasang Barang</h1>
-        </div>
-      </header>
+    <MobileLayout>
+      <div className="min-h-screen bg-muted">
+        <PageHeader title="Pasang Barang" />
 
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
+        <main className="container mx-auto px-4 py-6 max-w-2xl">
         <Card>
           <CardHeader>
             <CardTitle>Pasang Barang Anda</CardTitle>
@@ -404,7 +395,8 @@ export default function Upload() {
             </form>
           </CardContent>
         </Card>
-      </main>
-    </div>
+        </main>
+      </div>
+    </MobileLayout>
   );
 }

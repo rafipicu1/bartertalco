@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, LogOut, Plus, Edit, MapPin, Camera, Save, Trash2, Shield, Crown, Loader2, TrendingUp, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { MobileLayout } from '@/components/MobileLayout';
+import { PageHeader } from '@/components/PageHeader';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { LocationSelector } from '@/components/LocationSelector';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -230,19 +231,10 @@ export default function Profile() {
   return (
     <MobileLayout>
       <div className="min-h-screen bg-muted">
-        <header className="bg-card border-b border-border sticky top-0 z-50">
-          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate('/')}
-                className="rounded-full md:hidden"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-xl font-bold">Profil Saya</h1>
-            </div>
+        <PageHeader 
+          title="Profil Saya" 
+          onBack={() => navigate('/')}
+          rightContent={
             <Button
               variant="ghost"
               size="icon"
@@ -251,8 +243,8 @@ export default function Profile() {
             >
               <LogOut className="h-5 w-5" />
             </Button>
-          </div>
-        </header>
+          }
+        />
 
         <main className="container mx-auto px-4 py-6 max-w-4xl">
           {/* Profile Header */}

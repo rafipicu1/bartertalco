@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Crown, Zap, Sparkles, ArrowLeft, Package, MessageCircle } from 'lucide-react';
+import { Check, Crown, Zap, Sparkles, Package, MessageCircle } from 'lucide-react';
 import { MobileLayout } from '@/components/MobileLayout';
+import { PageHeader } from '@/components/PageHeader';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -145,19 +146,12 @@ export default function Pricing() {
 
   return (
     <MobileLayout>
-      <header className="bg-card border-b border-border sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <Crown className="h-6 w-6 text-yellow-500" />
-            <h1 className="text-xl font-bold">Upgrade Plan</h1>
-          </div>
-        </div>
-      </header>
+      <PageHeader 
+        title="Upgrade Plan" 
+        icon={<Crown className="h-5 w-5 text-yellow-500" />}
+      />
 
-      <main className="container mx-auto px-4 py-6 pb-24 max-w-lg">
+      <main className="container mx-auto px-4 py-6 max-w-lg">
         {/* Limit Message Banner */}
         {(limitType === 'swipe' || limitType === 'proposal') && (
           <div className="mb-6 p-4 bg-destructive/10 border border-destructive/30 rounded-xl text-center">

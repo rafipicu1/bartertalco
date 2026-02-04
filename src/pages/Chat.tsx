@@ -10,6 +10,7 @@ import { MessageCircle, ArrowLeft, User } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
 import { MobileLayout } from "@/components/MobileLayout";
+import { PageHeader } from "@/components/PageHeader";
 
 interface Conversation {
   id: string;
@@ -156,17 +157,11 @@ export default function Chat() {
   return (
     <MobileLayout>
       <div className="min-h-screen bg-background">
-        <header className="border-b bg-card sticky top-0 z-10 shadow-sm">
-          <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="md:hidden">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex items-center gap-2">
-              <MessageCircle className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-bold">Chat</h1>
-            </div>
-          </div>
-        </header>
+        <PageHeader 
+          title="Chat" 
+          icon={<MessageCircle className="h-5 w-5" />}
+          onBack={() => navigate('/')}
+        />
 
         <main className="container mx-auto px-4 py-4 max-w-4xl">
           {conversations.length === 0 ? (
