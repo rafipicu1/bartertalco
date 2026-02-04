@@ -5,8 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Heart, Trash2 } from 'lucide-react';
+import { Heart, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { MobileLayout } from '@/components/MobileLayout';
+import { PageHeader } from '@/components/PageHeader';
 
 export default function Wishlist() {
   const { user } = useAuth();
@@ -74,29 +76,21 @@ export default function Wishlist() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-muted flex items-center justify-center">
-        <div className="animate-spin h-16 w-16 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
+      <MobileLayout>
+        <PageHeader title="Wishlist" />
+        <div className="flex-1 flex items-center justify-center py-20">
+          <div className="animate-spin h-16 w-16 border-4 border-primary border-t-transparent rounded-full"></div>
+        </div>
+      </MobileLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-muted">
-      <header className="bg-card border-b border-border sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/swipe')}
-            className="rounded-full"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-xl font-bold">Wishlist</h1>
-        </div>
-      </header>
+    <MobileLayout>
+      <div className="min-h-screen bg-muted">
+        <PageHeader title="Wishlist" icon={<Heart className="h-5 w-5" />} />
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
+        <main className="container mx-auto px-4 py-6 max-w-4xl">
         {wishlistItems.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -156,7 +150,8 @@ export default function Wishlist() {
             })}
           </div>
         )}
-      </main>
-    </div>
+        </main>
+      </div>
+    </MobileLayout>
   );
 }

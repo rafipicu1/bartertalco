@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ItemDetailModal } from "@/components/ItemDetailModal";
 import { MobileLayout } from "@/components/MobileLayout";
+import { PageHeader } from "@/components/PageHeader";
 import { Pagination } from "@/components/Pagination";
 import { usePersonalizedFeed } from "@/hooks/usePersonalizedFeed";
 
@@ -138,36 +139,28 @@ const Index = () => {
   if (loading) {
     return (
       <MobileLayout>
-        <div className="min-h-screen bg-background">
-          <header className="border-b bg-card">
-            <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-              <button 
-                onClick={() => navigate('/')}
-                className="text-2xl font-bold text-primary hover:opacity-80 transition-opacity"
-              >
-                BARTR
-              </button>
-              {!user && (
-                <Button onClick={() => navigate('/auth')}>
-                  Login
-                </Button>
-              )}
-            </div>
-          </header>
-          <main className="container mx-auto px-4 py-8">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
-              {[...Array(8)].map((_, i) => (
-                <Card key={i}>
-                  <Skeleton className="aspect-square w-full rounded-t-lg" />
-                  <div className="p-3 space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </main>
-        </div>
+        <PageHeader 
+          title="BARTR" 
+          showBack={false}
+          rightContent={!user && (
+            <Button onClick={() => navigate('/auth')} size="sm">
+              Login
+            </Button>
+          )}
+        />
+        <main className="container mx-auto px-4 py-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+            {[...Array(8)].map((_, i) => (
+              <Card key={i}>
+                <Skeleton className="aspect-square w-full rounded-t-lg" />
+                <div className="p-3 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </Card>
+            ))}
+          </div>
+        </main>
       </MobileLayout>
     );
   }
@@ -175,48 +168,34 @@ const Index = () => {
   return (
     <MobileLayout>
       <div className="min-h-screen bg-background overflow-x-hidden max-w-full">
-        {/* Header - simplified for mobile */}
-        <header className="border-b bg-card sticky top-0 z-10 shadow-sm">
-          <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-            <button 
-              onClick={() => navigate('/')}
-              className="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
-            >
-              BARTR
-            </button>
+        {/* Header */}
+        <PageHeader 
+          title="BARTR" 
+          showBack={false}
+          rightContent={
             <div className="flex items-center gap-2">
               {user ? (
-                <>
-                  <div className="hidden md:flex gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/chat')}>
-                      <MessageCircle className="h-5 w-5" />
-                    </Button>
-                    <Button variant="outline" onClick={() => navigate('/swipe')}>
-                      <Heart className="mr-2 h-4 w-4" />
-                      Mode Swipe
-                    </Button>
-                    <Button onClick={() => navigate('/upload')}>
-                      <Tag className="mr-2 h-4 w-4" />
-                      Pasang Barang
-                    </Button>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => navigate('/profile')}
-                    className="md:hidden"
-                  >
-                    <User className="h-5 w-5" />
+                <div className="hidden md:flex gap-2">
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/chat')}>
+                    <MessageCircle className="h-5 w-5" />
                   </Button>
-                </>
+                  <Button variant="outline" size="sm" onClick={() => navigate('/swipe')}>
+                    <Heart className="mr-2 h-4 w-4" />
+                    Swipe
+                  </Button>
+                  <Button size="sm" onClick={() => navigate('/upload')}>
+                    <Tag className="mr-2 h-4 w-4" />
+                    Pasang
+                  </Button>
+                </div>
               ) : (
-                <Button onClick={() => navigate('/auth')}>
+                <Button onClick={() => navigate('/auth')} size="sm">
                   Login
                 </Button>
               )}
             </div>
-          </div>
-        </header>
+          }
+        />
 
         {/* Hero Section - compact for mobile */}
         <section className="bg-gradient-to-br from-primary/10 via-background to-secondary/10 border-b">
