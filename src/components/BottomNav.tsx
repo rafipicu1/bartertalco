@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Heart, MessageCircle, User, Plus } from "lucide-react";
+import { Home, ArrowLeftRight, MessageCircle, User, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -11,8 +11,8 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { icon: Home, label: "Beranda", path: "/" },
-  { icon: Heart, label: "Swipe", path: "/swipe" },
-  { icon: Plus, label: "Pasang", path: "/upload", highlight: true },
+  { icon: Plus, label: "Pasang", path: "/upload" },
+  { icon: ArrowLeftRight, label: "Swipe", path: "/swipe", highlight: true },
   { icon: MessageCircle, label: "Chat", path: "/chat" },
   { icon: User, label: "Profil", path: "/profile" },
 ];
