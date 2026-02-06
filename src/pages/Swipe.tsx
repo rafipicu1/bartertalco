@@ -190,10 +190,19 @@ export default function Swipe() {
         query = query.not('id', 'in', `(${swipedIds.join(',')})`);
       }
 
-      const { data, error } = await query.limit(20);
+      const { data, error } = await query.limit(50);
 
       if (error) throw error;
-      setItems(data || []);
+      
+      // Sort items by price proximity to selected user item
+      const userItemPrice = selectedUserItem.estimated_value;
+      const sortedData = (data || []).sort((a, b) => {
+        const diffA = Math.abs(a.estimated_value - userItemPrice);
+        const diffB = Math.abs(b.estimated_value - userItemPrice);
+        return diffA - diffB;
+      });
+      
+      setItems(sortedData);
       setCurrentIndex(0);
     } catch (error) {
       console.error('Error loading items:', error);
