@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, LogOut, Plus, Edit, MapPin, Camera, Save, Trash2, Shield, Crown, Loader2, TrendingUp, X } from 'lucide-react';
+import { LogOut, Edit, MapPin, Camera, Save, Shield, Crown, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { MobileLayout } from '@/components/MobileLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -15,20 +15,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { LocationSelector } from '@/components/LocationSelector';
 import { useSubscription } from '@/hooks/useSubscription';
 import { SubscriptionBadge } from '@/components/SubscriptionBadge';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 export default function Profile() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
-  const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingProfile, setEditingProfile] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { tier, limits, usage, subscription } = useSubscription();
-  const [selectedItem, setSelectedItem] = useState<any>(null);
   const [editForm, setEditForm] = useState({
     username: '',
     full_name: '',
@@ -40,26 +37,22 @@ export default function Profile() {
 
   useEffect(() => {
     loadProfile();
-    loadItems();
     checkAdminStatus();
   }, [user]);
 
   const checkAdminStatus = async () => {
     if (!user) return;
-    
     const { data } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .eq('role', 'admin')
       .maybeSingle();
-    
     setIsAdmin(!!data);
   };
 
   const loadProfile = async () => {
     if (!user) return;
-
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -79,23 +72,6 @@ export default function Profile() {
       });
     } catch (error) {
       console.error('Error loading profile:', error);
-    }
-  };
-
-  const loadItems = async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('items')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setItems(data || []);
-    } catch (error) {
-      console.error('Error loading items:', error);
     } finally {
       setLoading(false);
     }
@@ -127,7 +103,6 @@ export default function Profile() {
         .eq('id', user?.id);
 
       if (error) throw error;
-
       toast.success('Profil berhasil diperbarui');
       setEditingProfile(false);
       loadProfile();
@@ -136,64 +111,37 @@ export default function Profile() {
     }
   };
 
-  const handleDeleteItem = async (itemId: string) => {
-    if (!confirm('Yakin ingin menghapus barang ini?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('items')
-        .delete()
-        .eq('id', itemId);
-
-      if (error) throw error;
-      
-      toast.success('Barang berhasil dihapus');
-      loadItems();
-    } catch (error) {
-      toast.error('Gagal menghapus barang');
-    }
-  };
-
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !user) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error('File harus berupa gambar');
       return;
     }
-
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('Ukuran file maksimal 5MB');
       return;
     }
 
     setUploadingPhoto(true);
-
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/avatar.${fileExt}`;
 
-      // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(fileName, file, { upsert: true });
-
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: publicUrlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(fileName);
 
-      // Update profile with new photo URL
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ profile_photo_url: publicUrlData.publicUrl })
         .eq('id', user.id);
-
       if (updateError) throw updateError;
 
       toast.success('Foto profil berhasil diperbarui');
@@ -203,19 +151,8 @@ export default function Profile() {
       toast.error(error.message || 'Gagal mengupload foto');
     } finally {
       setUploadingPhoto(false);
-      // Reset input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
-  };
-
-  const formatPrice = (value: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(value);
   };
 
   if (loading) {
@@ -235,31 +172,27 @@ export default function Profile() {
           title="Profil Saya" 
           onBack={() => navigate('/')}
           rightContent={
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSignOut}
-              className="rounded-full text-destructive"
-            >
+            <Button variant="ghost" size="icon" onClick={handleSignOut} className="rounded-full text-destructive">
               <LogOut className="h-5 w-5" />
             </Button>
           }
         />
 
-        <main className="container mx-auto px-4 py-6 max-w-4xl">
-          {/* Profile Header */}
-          <Card className="mb-6">
+        <main className="container mx-auto px-4 py-6 max-w-4xl space-y-4">
+          {/* Profile Card */}
+          <Card>
             <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
-                <div className="relative">
+              <div className="flex flex-col items-center text-center">
+                {/* Avatar */}
+                <div className="relative mb-4">
                   {profile?.profile_photo_url ? (
                     <img 
                       src={profile.profile_photo_url} 
                       alt={profile?.username}
-                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover"
+                      className="w-24 h-24 rounded-full object-cover border-4 border-background shadow-lg"
                     />
                   ) : (
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center text-white text-2xl sm:text-3xl font-bold">
+                    <div className="w-24 h-24 bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center text-primary-foreground text-3xl font-bold border-4 border-background shadow-lg">
                       {profile?.username?.[0]?.toUpperCase() || 'U'}
                     </div>
                   )}
@@ -273,7 +206,7 @@ export default function Profile() {
                   <button 
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingPhoto}
-                    className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white shadow-lg disabled:opacity-50"
+                    className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground shadow-lg disabled:opacity-50"
                   >
                     {uploadingPhoto ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -282,65 +215,55 @@ export default function Profile() {
                     )}
                   </button>
                 </div>
-                <div className="flex-1 text-center sm:text-left">
-                  <div className="flex flex-col sm:flex-row items-center gap-2 mb-2">
-                    <h2 className="text-xl sm:text-2xl font-bold">{profile?.username}</h2>
-                    <SubscriptionBadge tier={tier} />
-                    {profile?.verified && (
-                      <Badge className="bg-accent text-accent-foreground">Verified</Badge>
-                    )}
+
+                {/* Name & Badge */}
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-xl font-bold">{profile?.username}</h2>
+                  <SubscriptionBadge tier={tier} />
+                  {profile?.verified && (
+                    <Badge className="bg-accent text-accent-foreground">Verified</Badge>
+                  )}
+                </div>
+                
+                {profile?.full_name && (
+                  <p className="text-muted-foreground text-sm mb-1">{profile.full_name}</p>
+                )}
+                
+                {profile?.location && (
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
+                    <MapPin className="h-3.5 w-3.5" />
+                    <span>{profile.location}</span>
                   </div>
-                  {profile?.full_name && (
-                    <p className="text-muted-foreground mb-1">{profile.full_name}</p>
-                  )}
-                  {profile?.location && (
-                    <div className="flex items-center justify-center sm:justify-start gap-1 text-sm text-muted-foreground mb-2">
-                      <MapPin className="h-4 w-4" />
-                      <span>{profile.location}</span>
-                    </div>
-                  )}
-                  {profile?.bio && (
-                    <p className="text-sm mb-3">{profile.bio}</p>
-                  )}
-                  <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditingProfile(true)}
-                      className="gap-2"
-                    >
-                      <Edit className="h-4 w-4" />
-                      Edit Profil
+                )}
+                
+                {profile?.bio && (
+                  <p className="text-sm mb-4 max-w-xs">{profile.bio}</p>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <Button variant="outline" size="sm" onClick={() => setEditingProfile(true)} className="gap-2">
+                    <Edit className="h-4 w-4" />
+                    Edit Profil
+                  </Button>
+                  {isAdmin && (
+                    <Button variant="outline" size="sm" onClick={() => navigate('/admin')} className="gap-2">
+                      <Shield className="h-4 w-4" />
+                      Admin
                     </Button>
-                    {isAdmin && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate('/admin')}
-                        className="gap-2"
-                      >
-                        <Shield className="h-4 w-4" />
-                        Admin Panel
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate('/pricing')}
-                      className="gap-2"
-                    >
-                      <Crown className="h-4 w-4" />
-                      {tier === 'free' ? 'Upgrade' : 'Kelola Plan'}
-                    </Button>
-                  </div>
+                  )}
+                  <Button variant="outline" size="sm" onClick={() => navigate('/pricing')} className="gap-2">
+                    <Crown className="h-4 w-4" />
+                    {tier === 'free' ? 'Upgrade' : 'Kelola Plan'}
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Subscription Stats */}
+          {/* Subscription Info */}
           {tier !== 'free' && subscription?.expires_at && (
-            <Card className="mb-6">
+            <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -359,7 +282,7 @@ export default function Profile() {
           )}
 
           {/* Usage Stats */}
-          <Card className="mb-6 border-primary/20">
+          <Card className="border-primary/20">
             <CardContent className="pt-4">
               <div className="flex items-center justify-between mb-3">
                 <p className="font-medium">Penggunaan Hari Ini</p>
@@ -375,100 +298,41 @@ export default function Profile() {
                     {usage.swipe_count}/{limits.daily_swipes + (subscription?.extra_swipe_slots || 0)}
                   </p>
                   <p className="text-xs text-muted-foreground">Swipe</p>
-                  {(subscription?.extra_swipe_slots || 0) > 0 && (
-                    <p className="text-xs text-accent">+{subscription?.extra_swipe_slots} bonus</p>
-                  )}
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
                     {usage.proposal_count}/{limits.daily_proposals + (subscription?.extra_proposal_slots || 0)}
                   </p>
                   <p className="text-xs text-muted-foreground">Proposal</p>
-                  {(subscription?.extra_proposal_slots || 0) > 0 && (
-                    <p className="text-xs text-accent">+{subscription?.extra_proposal_slots} bonus</p>
-                  )}
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
-                    {items.filter(i => i.is_active).length}/{limits.active_items + (subscription?.extra_post_slots || 0)}
+                    {usage.items_viewed || 0}/{limits.daily_views}
                   </p>
-                  <p className="text-xs text-muted-foreground">Item Aktif</p>
-                  {(subscription?.extra_post_slots || 0) > 0 && (
-                    <p className="text-xs text-accent">+{subscription?.extra_post_slots} slot</p>
-                  )}
+                  <p className="text-xs text-muted-foreground">Views</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Items Section */}
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold">Barang Saya ({items.length})</h3>
-            <Button
-              onClick={() => navigate('/upload')}
-              size="sm"
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Tambah
-            </Button>
-          </div>
-
-          {items.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                  <Plus className="h-8 w-8 text-muted-foreground" />
+          {/* Account Info */}
+          <Card>
+            <CardContent className="pt-4 space-y-3">
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Informasi Akun</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Email</span>
+                  <span className="font-medium">{user?.email}</span>
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Belum ada barang</h3>
-                <p className="text-muted-foreground mb-4 text-sm">Mulai upload barang pertamamu!</p>
-                <Button onClick={() => navigate('/upload')}>
-                  Upload Barang
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-              {items.map((item) => (
-                <Card 
-                  key={item.id} 
-                  className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => setSelectedItem(item)}
-                >
-                  <div className="aspect-square relative">
-                    <img
-                      src={item.photos[0] || '/placeholder.svg'}
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
-                    {!item.is_active && (
-                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                        <Badge variant="secondary">Nonaktif</Badge>
-                      </div>
-                    )}
-                  </div>
-                  <CardContent className="p-3">
-                    <h4 className="font-semibold text-sm mb-1 truncate">{item.name}</h4>
-                    <p className="text-sm font-bold text-primary mb-2">
-                      {formatPrice(item.estimated_value)}
-                    </p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full text-destructive h-8 hover:bg-destructive/10"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteItem(item.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Hapus
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Bergabung</span>
+                  <span className="font-medium">
+                    {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('id-ID') : '-'}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </main>
 
         {/* Edit Profile Dialog */}
@@ -521,96 +385,6 @@ export default function Profile() {
                 Simpan
               </Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Item Detail Dialog (View Only) */}
-        <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{selectedItem?.name}</DialogTitle>
-            </DialogHeader>
-            
-            {selectedItem && (
-              <div className="space-y-4">
-                {/* Photos Carousel */}
-                <Carousel className="w-full">
-                  <CarouselContent>
-                    {selectedItem.photos.map((photo: string, index: number) => (
-                      <CarouselItem key={index}>
-                        <div className="aspect-square relative overflow-hidden rounded-lg bg-muted">
-                          <img
-                            src={photo}
-                            alt={`${selectedItem.name} - ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  {selectedItem.photos.length > 1 && (
-                    <>
-                      <CarouselPrevious />
-                      <CarouselNext />
-                    </>
-                  )}
-                </Carousel>
-
-                {/* Item Info */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-primary text-primary-foreground">{selectedItem.category}</Badge>
-                    <Badge variant="outline">{selectedItem.condition}</Badge>
-                    {!selectedItem.is_active && (
-                      <Badge variant="secondary">Nonaktif</Badge>
-                    )}
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-muted-foreground">Estimasi Nilai</p>
-                    <p className="text-2xl font-bold text-primary">
-                      {formatPrice(selectedItem.estimated_value)}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <TrendingUp className="h-4 w-4" />
-                      Mau ditukar dengan
-                    </p>
-                    <p className="font-medium">{selectedItem.barter_preference}</p>
-                  </div>
-
-                  <div className="border-t pt-3">
-                    <h4 className="font-semibold mb-1">Deskripsi</h4>
-                    <p className="text-sm text-muted-foreground">{selectedItem.description}</p>
-                  </div>
-
-                  <div className="border-t pt-3">
-                    <h4 className="font-semibold mb-1 text-destructive">Kekurangan / Minus</h4>
-                    <p className="text-sm text-muted-foreground">{selectedItem.detailed_minus}</p>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground border-t pt-3">
-                    <MapPin className="h-4 w-4" />
-                    <span>{selectedItem.location}</span>
-                  </div>
-                </div>
-
-                {/* Delete Button */}
-                <Button
-                  variant="destructive"
-                  className="w-full"
-                  onClick={() => {
-                    handleDeleteItem(selectedItem.id);
-                    setSelectedItem(null);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Hapus Barang
-                </Button>
-              </div>
-            )}
           </DialogContent>
         </Dialog>
       </div>
