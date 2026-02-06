@@ -203,7 +203,7 @@ export default function Upload() {
       }
 
       toast.success('Barang berhasil diupload! 🎉');
-      navigate('/profile');
+      navigate('/katalog');
     } catch (error: any) {
       console.error('Error uploading item:', error);
       toast.error(error.message || 'Gagal mengupload barang');

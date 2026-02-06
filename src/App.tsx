@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Swipe from "./pages/Swipe";
 import Upload from "./pages/Upload";
 import Profile from "./pages/Profile";
+import Katalog from "./pages/Katalog";
 import Wishlist from "./pages/Wishlist";
 import Chat from "./pages/Chat";
 import ChatDetail from "./pages/ChatDetail";
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/swipe" element={<ProtectedRoute><Swipe /></ProtectedRoute>} />
             <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
+            <Route path="/katalog" element={<ProtectedRoute><Katalog /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/wishlist" element={<ProtectedRoute><Wishlist /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
