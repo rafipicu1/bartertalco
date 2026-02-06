@@ -1,16 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MapPin, User, Search, Sparkles, Heart, Tag, MessageCircle } from "lucide-react";
+import { MapPin, User, Search, Sparkles, SlidersHorizontal, X, TrendingUp, Clock, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ItemDetailModal } from "@/components/ItemDetailModal";
 import { MobileLayout } from "@/components/MobileLayout";
-import { PageHeader } from "@/components/PageHeader";
 import { Pagination } from "@/components/Pagination";
 import { usePersonalizedFeed } from "@/hooks/usePersonalizedFeed";
 
@@ -49,6 +48,36 @@ const CONDITION_LABELS: Record<string, string> = {
   worn: 'Bekas Pakai',
 };
 
+const CATEGORY_OPTIONS = [
+  { value: 'all', label: 'Semua', icon: '🔍' },
+  { value: 'elektronik', label: 'Elektronik', icon: '📱' },
+  { value: 'kendaraan', label: 'Kendaraan', icon: '🏍️' },
+  { value: 'fashion', label: 'Fashion', icon: '👕' },
+  { value: 'gaming', label: 'Gaming', icon: '🎮' },
+  { value: 'musik', label: 'Musik', icon: '🎸' },
+  { value: 'olahraga', label: 'Olahraga', icon: '⚽' },
+  { value: 'hobi_koleksi', label: 'Hobi', icon: '🎨' },
+  { value: 'perlengkapan_rumah', label: 'Rumah', icon: '🏡' },
+  { value: 'mainan_anak', label: 'Mainan', icon: '🧸' },
+  { value: 'kantor_industri', label: 'Kantor', icon: '💼' },
+  { value: 'kesehatan_kecantikan', label: 'Beauty', icon: '💊' },
+  { value: 'properti', label: 'Properti', icon: '🏠' },
+  { value: 'other', label: 'Lainnya', icon: '📦' },
+];
+
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Terbaru', icon: Clock },
+  { value: 'price_low', label: 'Harga ↑', icon: TrendingUp },
+  { value: 'price_high', label: 'Harga ↓', icon: TrendingUp },
+];
+
+const CONDITION_FILTER = [
+  { value: 'all', label: 'Semua' },
+  { value: 'new', label: 'Baru' },
+  { value: 'like_new', label: 'Seperti Baru' },
+  { value: 'good', label: 'Baik' },
+];
+
 const ITEMS_PER_PAGE = 12;
 
 const Index = () => {
@@ -57,6 +86,11 @@ const Index = () => {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
+  const [conditionFilter, setConditionFilter] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const categoryRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
   const { items: personalizedItems, trackItemView, trackSearch } = usePersonalizedFeed(100, 0);
@@ -67,9 +101,8 @@ const Index = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, selectedCategory, sortBy, conditionFilter]);
 
-  // Debounce search tracking
   useEffect(() => {
     if (searchQuery.trim()) {
       const timer = setTimeout(() => {
@@ -105,6 +138,12 @@ const Index = () => {
   };
 
   const formatPrice = (value: number) => {
+    if (value >= 1000000) {
+      return `Rp${(value / 1000000).toFixed(value % 1000000 === 0 ? 0 : 1)}jt`;
+    }
+    if (value >= 1000) {
+      return `Rp${(value / 1000).toFixed(0)}rb`;
+    }
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
@@ -113,20 +152,35 @@ const Index = () => {
     }).format(value);
   };
 
-  // Use personalized feed if available, otherwise use all items
   const displayItems = user && personalizedItems.length > 0 ? personalizedItems : allItems;
 
-  // Filter by search only (no category filter)
   const filteredItems = displayItems.filter(item => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return item.name.toLowerCase().includes(query) ||
-      item.description.toLowerCase().includes(query) ||
-      item.barter_preference.toLowerCase().includes(query);
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = item.name.toLowerCase().includes(query) ||
+        item.description.toLowerCase().includes(query) ||
+        item.barter_preference.toLowerCase().includes(query);
+      if (!matchesSearch) return false;
+    }
+    // Category filter
+    if (selectedCategory !== 'all' && item.category !== selectedCategory) return false;
+    // Condition filter
+    if (conditionFilter !== 'all' && item.condition !== conditionFilter) return false;
+    return true;
   });
 
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-  const paginatedItems = filteredItems.slice(
+  // Sort
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    switch (sortBy) {
+      case 'price_low': return a.estimated_value - b.estimated_value;
+      case 'price_high': return b.estimated_value - a.estimated_value;
+      default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+  });
+
+  const totalPages = Math.ceil(sortedItems.length / ITEMS_PER_PAGE);
+  const paginatedItems = sortedItems.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
@@ -136,31 +190,44 @@ const Index = () => {
     setSelectedItem(item);
   };
 
+  const activeFilterCount = [
+    selectedCategory !== 'all',
+    conditionFilter !== 'all',
+    sortBy !== 'newest',
+  ].filter(Boolean).length;
+
+  const clearAllFilters = () => {
+    setSelectedCategory('all');
+    setConditionFilter('all');
+    setSortBy('newest');
+    setSearchQuery('');
+  };
+
   if (loading) {
     return (
       <MobileLayout>
-        <PageHeader 
-          title="BARTR" 
-          showBack={false}
-          rightContent={!user && (
-            <Button onClick={() => navigate('/auth')} size="sm">
-              Login
-            </Button>
-          )}
-        />
-        <main className="container mx-auto px-4 py-8">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
-            {[...Array(8)].map((_, i) => (
-              <Card key={i}>
-                <Skeleton className="aspect-square w-full rounded-t-lg" />
-                <div className="p-3 space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-              </Card>
+        <div className="min-h-screen bg-background">
+          {/* Skeleton search bar */}
+          <div className="sticky top-0 z-40 bg-background border-b px-3 py-2">
+            <Skeleton className="h-10 w-full rounded-full" />
+          </div>
+          {/* Skeleton categories */}
+          <div className="flex gap-2 px-3 py-2 overflow-hidden">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-8 w-20 rounded-full flex-shrink-0" />
             ))}
           </div>
-        </main>
+          {/* Skeleton grid */}
+          <div className="grid grid-cols-2 gap-2 px-3 py-2">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="aspect-square w-full rounded-xl" />
+                <Skeleton className="h-3 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ))}
+          </div>
+        </div>
       </MobileLayout>
     );
   }
@@ -168,166 +235,248 @@ const Index = () => {
   return (
     <MobileLayout>
       <div className="min-h-screen bg-background overflow-x-hidden max-w-full">
-        {/* Header */}
-        <PageHeader 
-          title="BARTR" 
-          showBack={false}
-          rightContent={
-            <div className="flex items-center gap-2">
-              {user ? (
-                <div className="hidden md:flex gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => navigate('/chat')}>
-                    <MessageCircle className="h-5 w-5" />
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => navigate('/swipe')}>
-                    <Heart className="mr-2 h-4 w-4" />
-                    Swipe
-                  </Button>
-                  <Button size="sm" onClick={() => navigate('/upload')}>
-                    <Tag className="mr-2 h-4 w-4" />
-                    Pasang
-                  </Button>
+        {/* Sticky Search Header */}
+        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50">
+          <div className="flex items-center gap-2 px-3 py-2">
+            {/* Logo */}
+            <h1 className="text-lg font-extrabold text-primary flex-shrink-0 tracking-tight">BARTR</h1>
+            
+            {/* Search Bar */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Cari barang..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-8 h-9 rounded-full bg-muted/50 border-0 text-sm focus-visible:ring-1"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                >
+                  <X className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              )}
+            </div>
+
+            {/* Filter button */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`relative flex-shrink-0 p-2 rounded-full transition-colors ${
+                showFilters || activeFilterCount > 0 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-muted/50 text-muted-foreground'
+              }`}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+
+            {/* Login button if not logged in */}
+            {!user && (
+              <Button onClick={() => navigate('/auth')} size="sm" className="h-9 rounded-full text-xs flex-shrink-0">
+                Login
+              </Button>
+            )}
+          </div>
+
+          {/* Category horizontal scroll */}
+          <div 
+            ref={categoryRef}
+            className="flex gap-1.5 px-3 pb-2 overflow-x-auto scrollbar-hide"
+          >
+            {CATEGORY_OPTIONS.map((cat) => (
+              <button
+                key={cat.value}
+                onClick={() => setSelectedCategory(cat.value)}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+                  selectedCategory === cat.value
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-muted/60 text-foreground hover:bg-muted'
+                }`}
+              >
+                <span className="text-sm">{cat.icon}</span>
+                {cat.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Expanded filter panel */}
+          {showFilters && (
+            <div className="px-3 pb-3 space-y-2 border-t border-border/50 bg-background animate-fade-in">
+              {/* Sort */}
+              <div className="pt-2">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Urutkan</p>
+                <div className="flex gap-1.5">
+                  {SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setSortBy(opt.value)}
+                      className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                        sortBy === opt.value
+                          ? 'bg-secondary text-secondary-foreground'
+                          : 'bg-muted/60 text-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
                 </div>
-              ) : (
-                <Button onClick={() => navigate('/auth')} size="sm">
-                  Login
+              </div>
+
+              {/* Condition */}
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Kondisi</p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {CONDITION_FILTER.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setConditionFilter(opt.value)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                        conditionFilter === opt.value
+                          ? 'bg-secondary text-secondary-foreground'
+                          : 'bg-muted/60 text-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Clear all */}
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={clearAllFilters}
+                  className="text-xs text-destructive font-medium flex items-center gap-1"
+                >
+                  <X className="h-3 w-3" />
+                  Hapus semua filter
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Quick action banner for logged in users */}
+        {user && (
+          <div className="px-3 py-2">
+            <button
+              onClick={() => navigate('/swipe')}
+              className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 border border-primary/20 hover:border-primary/40 transition-all"
+            >
+              <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-semibold">Mulai Swipe & Barter</p>
+                <p className="text-[10px] text-muted-foreground">Temukan match untuk barangmu</p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            </button>
+          </div>
+        )}
+
+        {/* Results info */}
+        <div className="flex items-center justify-between px-3 py-1.5">
+          <p className="text-xs text-muted-foreground">
+            {sortedItems.length} barang ditemukan
+          </p>
+          {activeFilterCount > 0 && (
+            <button
+              onClick={clearAllFilters}
+              className="text-xs text-primary font-medium"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+
+        {/* Main content */}
+        <main className="px-2 pb-4 overflow-x-hidden">
+          {sortedItems.length === 0 ? (
+            <div className="text-center py-16 px-4">
+              <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+                <Search className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-base font-bold mb-1">Tidak ada barang</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {searchQuery ? 'Coba kata kunci lain' : 'Belum ada barang di kategori ini'}
+              </p>
+              {(searchQuery || activeFilterCount > 0) && (
+                <Button variant="outline" size="sm" onClick={clearAllFilters} className="rounded-full">
+                  Hapus Filter
                 </Button>
               )}
             </div>
-          }
-        />
-
-        {/* Hero Section - compact for mobile */}
-        <section className="bg-gradient-to-br from-primary/10 via-background to-secondary/10 border-b">
-          <div className="container mx-auto px-4 py-6 md:py-12">
-            <div className="max-w-3xl mx-auto text-center space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full text-xs font-medium text-primary">
-                <Sparkles className="h-3 w-3" />
-                {user ? 'Rekomendasi untukmu' : 'Platform BARTR Terpercaya'}
-              </div>
-              <h2 className="text-2xl md:text-4xl font-bold leading-tight">
-                Tukar Barangmu <span className="text-primary">Mudah & Cepat</span>
-              </h2>
-              
-              {/* Search Bar */}
-              <div className="max-w-xl mx-auto">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Cari barang yang kamu mau..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-4 py-5 rounded-xl border-2 focus:border-primary"
-                  />
-                </div>
-              </div>
-
-              {/* Stats - compact */}
-              <div className="flex justify-center gap-6 pt-4">
-                <div className="text-center">
-                  <div className="text-xl md:text-2xl font-bold text-primary">{allItems.length}+</div>
-                  <div className="text-xs text-muted-foreground">Barang</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xl md:text-2xl font-bold text-primary">1K+</div>
-                  <div className="text-xs text-muted-foreground">Transaksi</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xl md:text-2xl font-bold text-primary">500+</div>
-                  <div className="text-xs text-muted-foreground">Pengguna</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <main className="container mx-auto px-4 py-4 md:py-8 overflow-x-hidden">
-          {/* Items Header */}
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-bold">
-              {user ? '✨ Untukmu' : 'Temukan Barang'}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {filteredItems.length} barang
-            </p>
-          </div>
-
-          {filteredItems.length === 0 ? (
-            <div className="text-center py-16 px-4">
-              <div className="w-20 h-20 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
-                <Sparkles className="h-10 w-10 text-primary" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">
-                {searchQuery ? 'Tidak ada barang yang cocok' : 'Belum ada barang tersedia'}
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                {user 
-                  ? 'Jadi yang pertama pasang barang untuk ditukar!' 
-                  : 'Login untuk mulai pasang barang dan barter dengan pengguna lain.'}
-              </p>
-              <Button onClick={() => navigate(user ? '/upload' : '/auth')}>
-                {user ? 'Pasang Barang Pertama' : 'Login Sekarang'}
-              </Button>
-            </div>
           ) : (
             <>
-              {/* Items Grid - 2 columns on mobile */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+              {/* Items Grid */}
+              <div className="grid grid-cols-2 gap-2">
                 {paginatedItems.map((item) => (
-                  <Card 
+                  <button 
                     key={item.id} 
-                    className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group border hover:border-primary/50"
+                    className="text-left overflow-hidden rounded-xl border border-border/50 bg-card hover:shadow-md transition-all duration-200 active:scale-[0.98]"
                     onClick={() => handleItemClick(item)}
                   >
+                    {/* Image */}
                     <div className="relative aspect-square overflow-hidden bg-muted">
                       <img
                         src={item.photos[0]}
                         alt={item.name}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        className="w-full h-full object-cover"
+                        loading="lazy"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      {/* Condition badge on image */}
+                      <div className="absolute top-1.5 left-1.5">
+                        <span className="px-1.5 py-0.5 rounded-md bg-background/80 backdrop-blur-sm text-[9px] font-medium">
+                          {CONDITION_LABELS[item.condition] || item.condition}
+                        </span>
+                      </div>
                     </div>
 
-                    <CardContent className="p-2 md:p-3 space-y-1">
-                      <h4 className="font-semibold text-sm line-clamp-1">{item.name}</h4>
+                    {/* Info */}
+                    <div className="p-2 space-y-1">
+                      <h4 className="font-medium text-xs leading-tight line-clamp-2 min-h-[2rem]">
+                        {item.name}
+                      </h4>
                       
+                      <p className="text-sm font-bold text-primary">
+                        {formatPrice(item.estimated_value)}
+                      </p>
+
                       <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                        <MapPin className="h-3 w-3 flex-shrink-0" />
+                        <MapPin className="h-2.5 w-2.5 flex-shrink-0" />
                         <span className="truncate">{item.city || item.location?.split(' — ')[0]}</span>
                       </div>
 
-                      <div className="bg-primary/5 p-2 rounded-md">
-                        <p className="text-base md:text-lg font-bold text-primary">
-                          {formatPrice(item.estimated_value)}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-1">
-                        <div className="flex items-center gap-1">
-                          <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
-                            {item.profiles?.profile_photo_url ? (
-                              <img 
-                                src={item.profiles.profile_photo_url} 
-                                alt={item.profiles.username}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                                <User className="h-3 w-3 text-primary-foreground" />
-                              </div>
-                            )}
-                          </div>
-                          <span className="text-[10px] truncate max-w-[60px]">
-                            {item.profiles?.username}
-                          </span>
+                      {/* Owner row */}
+                      <div className="flex items-center gap-1 pt-0.5">
+                        <div className="w-4 h-4 rounded-full overflow-hidden flex-shrink-0">
+                          {item.profiles?.profile_photo_url ? (
+                            <img 
+                              src={item.profiles.profile_photo_url} 
+                              alt={item.profiles.username}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                              <User className="h-2 w-2 text-primary-foreground" />
+                            </div>
+                          )}
                         </div>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          {CONDITION_LABELS[item.condition] || item.condition}
-                        </Badge>
+                        <span className="text-[10px] text-muted-foreground truncate">
+                          {item.profiles?.username}
+                        </span>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </button>
                 ))}
               </div>
 
