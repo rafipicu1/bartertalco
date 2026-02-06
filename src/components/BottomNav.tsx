@@ -11,7 +11,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { icon: Home, label: "Beranda", path: "/" },
-  { icon: Plus, label: "Pasang", path: "/upload" },
+  { icon: Plus, label: "Upload", path: "/upload" },
   { icon: ArrowLeftRight, label: "Swipe", path: "/swipe", highlight: true },
   { icon: MessageCircle, label: "Chat", path: "/chat" },
   { icon: User, label: "Profil", path: "/profile" },
