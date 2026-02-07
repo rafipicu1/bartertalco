@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, TrendingUp, Heart, X, ThumbsUp, Navigation, User } from 'lucide-react';
+import { MapPin, Heart, X, ThumbsUp, Navigation, User } from 'lucide-react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -112,58 +112,56 @@ export function SwipeCard({ item, onSwipe, style, isLiked = false }: SwipeCardPr
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
           
-          {/* Liked badge */}
           {isLiked && (
-            <Badge className="absolute top-4 left-4 bg-yellow-500/90 text-white flex items-center gap-1 text-sm px-3 py-1">
-              <Heart className="h-4 w-4 fill-white" />
+            <Badge className="absolute top-4 left-4 bg-secondary/90 text-secondary-foreground flex items-center gap-1 text-xs px-3 py-1">
+              <Heart className="h-3.5 w-3.5 fill-current" />
               Menunggu Balasan
             </Badge>
           )}
           
-          {/* Swipe indicators */}
+          {/* Swipe indicators - outline icons only */}
           <motion.div
-            className="absolute top-10 left-6 bg-accent text-accent-foreground px-6 py-3 rounded-2xl font-bold text-2xl rotate-[-15deg] border-4 border-accent shadow-lg"
+            className="absolute top-10 left-6 bg-accent text-accent-foreground px-5 py-2.5 rounded-2xl font-bold text-xl rotate-[-15deg] border-4 border-accent shadow-lg flex items-center gap-2"
             style={{ opacity: useTransform(x, [0, 100], [0, 1]) }}
           >
-            👍 SUKA
+            <ThumbsUp className="h-6 w-6" />
+            SUKA
           </motion.div>
           <motion.div
-            className="absolute top-10 right-6 bg-destructive text-destructive-foreground px-6 py-3 rounded-2xl font-bold text-2xl rotate-[15deg] border-4 border-destructive shadow-lg"
+            className="absolute top-10 right-6 bg-destructive text-destructive-foreground px-5 py-2.5 rounded-2xl font-bold text-xl rotate-[15deg] border-4 border-destructive shadow-lg flex items-center gap-2"
             style={{ opacity: useTransform(x, [-100, 0], [1, 0]) }}
           >
-            👎 SKIP
+            <X className="h-6 w-6" />
+            SKIP
           </motion.div>
           
-          <div className="absolute bottom-0 left-0 right-0 p-5 text-white space-y-2">
+          <div className="absolute bottom-0 left-0 right-0 p-4 text-white space-y-2">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1">
-                <h3 className="text-2xl font-bold mb-1 drop-shadow-lg">{item.name}</h3>
+                <h3 className="text-xl font-bold mb-1 drop-shadow-lg">{item.name}</h3>
                 <div className="flex items-center gap-1 text-sm opacity-90">
-                  <MapPin className="h-4 w-4" />
+                  <MapPin className="h-3.5 w-3.5" />
                   <span>{item.city || item.location}</span>
                   {distance && (
                     <>
-                      <span className="mx-1">•</span>
+                      <span className="mx-1 opacity-50">·</span>
                       <Navigation className="h-3 w-3" />
                       <span>{distance}</span>
                     </>
                   )}
                 </div>
               </div>
-              <Badge className="bg-primary text-primary-foreground text-base font-semibold px-3 py-1.5 shadow-lg">
+              <Badge className="bg-primary text-primary-foreground text-sm font-semibold px-3 py-1.5 shadow-lg">
                 {formatPrice(item.estimated_value)}
               </Badge>
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex gap-2">
-                <Badge variant="outline" className="text-xs bg-background/30 text-white border-white/50">
-                  {CONDITION_LABELS[item.condition] || item.condition}
-                </Badge>
-              </div>
-              {/* Owner info */}
+              <Badge variant="outline" className="text-xs bg-background/20 text-white border-white/30">
+                {CONDITION_LABELS[item.condition] || item.condition}
+              </Badge>
               {item.profiles && (
-                <div className="flex items-center gap-2 bg-black/30 px-2 py-1 rounded-full">
-                  <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
+                <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-full">
+                  <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
                     {item.profiles.profile_photo_url ? (
                       <img 
                         src={item.profiles.profile_photo_url} 
@@ -172,37 +170,37 @@ export function SwipeCard({ item, onSwipe, style, isLiked = false }: SwipeCardPr
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                        <User className="h-3 w-3 text-primary-foreground" />
+                        <User className="h-2.5 w-2.5 text-primary-foreground" />
                       </div>
                     )}
                   </div>
-                  <span className="text-xs font-medium">@{item.profiles.username}</span>
+                  <span className="text-[10px] font-medium">@{item.profiles.username}</span>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Action buttons - simplified */}
-        <div className="p-4 bg-gradient-to-b from-card to-muted/20">
-          <div className="flex justify-center items-center gap-8">
+        {/* Action buttons */}
+        <div className="p-3 bg-card">
+          <div className="flex justify-center items-center gap-6">
             <button
               onClick={() => onSwipe('left')}
-              className="w-16 h-16 rounded-full bg-destructive/10 hover:bg-destructive/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-md"
+              className="w-14 h-14 rounded-full bg-destructive/10 hover:bg-destructive/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-sm"
             >
-              <X className="h-8 w-8 text-destructive" />
+              <X className="h-7 w-7 text-destructive" />
             </button>
             <button
               onClick={() => onSwipe('up')}
-              className="w-20 h-20 rounded-full bg-secondary/10 hover:bg-secondary/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 border-2 border-secondary/30 shadow-md"
+              className="w-16 h-16 rounded-full bg-secondary/10 hover:bg-secondary/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 border-2 border-secondary/30 shadow-sm"
             >
-              <Heart className="h-10 w-10 text-secondary fill-secondary" />
+              <Heart className="h-8 w-8 text-secondary" />
             </button>
             <button
               onClick={() => onSwipe('right')}
-              className="w-16 h-16 rounded-full bg-accent/10 hover:bg-accent/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-md"
+              className="w-14 h-14 rounded-full bg-accent/10 hover:bg-accent/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-sm"
             >
-              <ThumbsUp className="h-8 w-8 text-accent" />
+              <ThumbsUp className="h-7 w-7 text-accent-foreground" />
             </button>
           </div>
         </div>
