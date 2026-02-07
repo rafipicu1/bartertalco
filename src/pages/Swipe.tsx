@@ -22,20 +22,20 @@ import {
 import { INDONESIA_LOCATIONS, getProvince, getCity } from '@/data/indonesiaLocations';
 
 const CATEGORY_OPTIONS = [
-  { value: 'all', label: 'Semua Kategori', icon: '🔍' },
-  { value: 'elektronik', label: 'Elektronik', icon: '📱' },
-  { value: 'kendaraan', label: 'Kendaraan', icon: '🏍️' },
-  { value: 'properti', label: 'Properti', icon: '🏠' },
-  { value: 'fashion', label: 'Fashion', icon: '👕' },
-  { value: 'hobi_koleksi', label: 'Hobi & Koleksi', icon: '🎨' },
-  { value: 'olahraga', label: 'Olahraga', icon: '⚽' },
-  { value: 'musik', label: 'Musik', icon: '🎸' },
-  { value: 'gaming', label: 'Gaming', icon: '🎮' },
-  { value: 'perlengkapan_rumah', label: 'Rumah Tangga', icon: '🏡' },
-  { value: 'mainan_anak', label: 'Mainan & Anak', icon: '🧸' },
-  { value: 'kantor_industri', label: 'Kantor & Industri', icon: '💼' },
-  { value: 'kesehatan_kecantikan', label: 'Kesehatan', icon: '💊' },
-  { value: 'other', label: 'Lainnya', icon: '📦' },
+  { value: 'all', label: 'Semua Kategori' },
+  { value: 'elektronik', label: 'Elektronik' },
+  { value: 'kendaraan', label: 'Kendaraan' },
+  { value: 'properti', label: 'Properti' },
+  { value: 'fashion', label: 'Fashion' },
+  { value: 'hobi_koleksi', label: 'Hobi & Koleksi' },
+  { value: 'olahraga', label: 'Olahraga' },
+  { value: 'musik', label: 'Musik' },
+  { value: 'gaming', label: 'Gaming' },
+  { value: 'perlengkapan_rumah', label: 'Rumah Tangga' },
+  { value: 'mainan_anak', label: 'Mainan & Anak' },
+  { value: 'kantor_industri', label: 'Kantor & Industri' },
+  { value: 'kesehatan_kecantikan', label: 'Kesehatan' },
+  { value: 'other', label: 'Lainnya' },
 ];
 
 type SwipeStep = 'select-item' | 'select-category' | 'select-location' | 'swipe';
@@ -232,7 +232,7 @@ export default function Swipe() {
             user_id: user.id,
             item_id: currentItem.id,
           });
-        toast.success('Ditambahkan ke wishlist! ❤️');
+        toast.success('Ditambahkan ke wishlist');
       }
 
       if (direction === 'right' || direction === 'left') {
@@ -294,7 +294,7 @@ export default function Swipe() {
                   }).format(value);
                 };
 
-                const matchMessage = `🎉 **MATCH!** 🎉\n\nKalian berdua saling suka! \n\n*${selectedUserItem.name}* (${formatPriceMsg(selectedUserItem.estimated_value)}) ↔️ *${currentItem.name}* (${formatPriceMsg(currentItem.estimated_value)})\n\nYuk lanjutkan diskusi untuk barter! 👇`;
+                const matchMessage = `MATCH!\n\nKalian berdua saling suka!\n\n${selectedUserItem.name} (${formatPriceMsg(selectedUserItem.estimated_value)}) ↔ ${currentItem.name} (${formatPriceMsg(currentItem.estimated_value)})\n\nYuk lanjutkan diskusi untuk barter!`;
 
                 await supabase
                   .from('messages')
@@ -305,7 +305,7 @@ export default function Swipe() {
                     message_type: 'match_notification',
                   });
 
-                toast.success("🎉 Match! Kalian saling suka!", {
+                toast.success("Match! Kalian saling suka!", {
                   description: 'Membuka chat...',
                 });
                 
@@ -495,7 +495,7 @@ export default function Swipe() {
               onClick={() => handleSelectCategory(cat.value)}
             >
               <CardContent className="p-3 text-center">
-                <span className="text-2xl mb-1 block">{cat.icon}</span>
+                <h3 className="font-medium text-xs">{cat.label}</h3>
                 <h3 className="font-medium text-xs">{cat.label}</h3>
               </CardContent>
             </Card>

@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MapPin, User, Search, Sparkles, SlidersHorizontal, X, TrendingUp, Clock, ArrowRight } from "lucide-react";
+import { MapPin, User, Search, ArrowRightLeft, SlidersHorizontal, X, TrendingUp, Clock, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ItemDetailModal } from "@/components/ItemDetailModal";
@@ -49,26 +48,26 @@ const CONDITION_LABELS: Record<string, string> = {
 };
 
 const CATEGORY_OPTIONS = [
-  { value: 'all', label: 'Semua', icon: '🔍' },
-  { value: 'elektronik', label: 'Elektronik', icon: '📱' },
-  { value: 'kendaraan', label: 'Kendaraan', icon: '🏍️' },
-  { value: 'fashion', label: 'Fashion', icon: '👕' },
-  { value: 'gaming', label: 'Gaming', icon: '🎮' },
-  { value: 'musik', label: 'Musik', icon: '🎸' },
-  { value: 'olahraga', label: 'Olahraga', icon: '⚽' },
-  { value: 'hobi_koleksi', label: 'Hobi', icon: '🎨' },
-  { value: 'perlengkapan_rumah', label: 'Rumah', icon: '🏡' },
-  { value: 'mainan_anak', label: 'Mainan', icon: '🧸' },
-  { value: 'kantor_industri', label: 'Kantor', icon: '💼' },
-  { value: 'kesehatan_kecantikan', label: 'Beauty', icon: '💊' },
-  { value: 'properti', label: 'Properti', icon: '🏠' },
-  { value: 'other', label: 'Lainnya', icon: '📦' },
+  { value: 'all', label: 'Semua' },
+  { value: 'elektronik', label: 'Elektronik' },
+  { value: 'kendaraan', label: 'Kendaraan' },
+  { value: 'fashion', label: 'Fashion' },
+  { value: 'gaming', label: 'Gaming' },
+  { value: 'musik', label: 'Musik' },
+  { value: 'olahraga', label: 'Olahraga' },
+  { value: 'hobi_koleksi', label: 'Hobi' },
+  { value: 'perlengkapan_rumah', label: 'Rumah' },
+  { value: 'mainan_anak', label: 'Mainan' },
+  { value: 'kantor_industri', label: 'Kantor' },
+  { value: 'kesehatan_kecantikan', label: 'Beauty' },
+  { value: 'properti', label: 'Properti' },
+  { value: 'other', label: 'Lainnya' },
 ];
 
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Terbaru', icon: Clock },
-  { value: 'price_low', label: 'Harga ↑', icon: TrendingUp },
-  { value: 'price_high', label: 'Harga ↓', icon: TrendingUp },
+  { value: 'price_low', label: 'Harga Terendah', icon: TrendingUp },
+  { value: 'price_high', label: 'Harga Tertinggi', icon: TrendingUp },
 ];
 
 const CONDITION_FILTER = [
@@ -155,7 +154,6 @@ const Index = () => {
   const displayItems = user && personalizedItems.length > 0 ? personalizedItems : allItems;
 
   const filteredItems = displayItems.filter(item => {
-    // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchesSearch = item.name.toLowerCase().includes(query) ||
@@ -163,14 +161,11 @@ const Index = () => {
         item.barter_preference.toLowerCase().includes(query);
       if (!matchesSearch) return false;
     }
-    // Category filter
     if (selectedCategory !== 'all' && item.category !== selectedCategory) return false;
-    // Condition filter
     if (conditionFilter !== 'all' && item.condition !== conditionFilter) return false;
     return true;
   });
 
-  // Sort
   const sortedItems = [...filteredItems].sort((a, b) => {
     switch (sortBy) {
       case 'price_low': return a.estimated_value - b.estimated_value;
@@ -207,17 +202,14 @@ const Index = () => {
     return (
       <MobileLayout>
         <div className="min-h-screen bg-background">
-          {/* Skeleton search bar */}
           <div className="sticky top-0 z-40 bg-background border-b px-3 py-2">
             <Skeleton className="h-10 w-full rounded-full" />
           </div>
-          {/* Skeleton categories */}
           <div className="flex gap-2 px-3 py-2 overflow-hidden">
             {[...Array(5)].map((_, i) => (
               <Skeleton key={i} className="h-8 w-20 rounded-full flex-shrink-0" />
             ))}
           </div>
-          {/* Skeleton grid */}
           <div className="grid grid-cols-2 gap-2 px-3 py-2">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="space-y-2">
@@ -238,10 +230,8 @@ const Index = () => {
         {/* Sticky Search Header */}
         <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50">
           <div className="flex items-center gap-2 px-3 py-2">
-            {/* Logo */}
             <h1 className="text-lg font-extrabold text-primary flex-shrink-0 tracking-tight">BARTR</h1>
             
-            {/* Search Bar */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -261,7 +251,6 @@ const Index = () => {
               )}
             </div>
 
-            {/* Filter button */}
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`relative flex-shrink-0 p-2 rounded-full transition-colors ${
@@ -278,7 +267,6 @@ const Index = () => {
               )}
             </button>
 
-            {/* Login button if not logged in */}
             {!user && (
               <Button onClick={() => navigate('/auth')} size="sm" className="h-9 rounded-full text-xs flex-shrink-0">
                 Login
@@ -286,7 +274,7 @@ const Index = () => {
             )}
           </div>
 
-          {/* Category horizontal scroll */}
+          {/* Category chips - no emojis */}
           <div 
             ref={categoryRef}
             className="flex gap-1.5 px-3 pb-2 overflow-x-auto scrollbar-hide"
@@ -295,22 +283,20 @@ const Index = () => {
               <button
                 key={cat.value}
                 onClick={() => setSelectedCategory(cat.value)}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${
                   selectedCategory === cat.value
                     ? 'bg-primary text-primary-foreground shadow-sm'
                     : 'bg-muted/60 text-foreground hover:bg-muted'
                 }`}
               >
-                <span className="text-sm">{cat.icon}</span>
                 {cat.label}
               </button>
             ))}
           </div>
 
-          {/* Expanded filter panel */}
+          {/* Filter panel */}
           {showFilters && (
-            <div className="px-3 pb-3 space-y-2 border-t border-border/50 bg-background animate-fade-in">
-              {/* Sort */}
+            <div className="px-3 pb-3 space-y-2.5 border-t border-border/50 bg-background animate-fade-in">
               <div className="pt-2">
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Urutkan</p>
                 <div className="flex gap-1.5">
@@ -330,7 +316,6 @@ const Index = () => {
                 </div>
               </div>
 
-              {/* Condition */}
               <div>
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Kondisi</p>
                 <div className="flex gap-1.5 flex-wrap">
@@ -350,7 +335,6 @@ const Index = () => {
                 </div>
               </div>
 
-              {/* Clear all */}
               {activeFilterCount > 0 && (
                 <button
                   onClick={clearAllFilters}
@@ -364,15 +348,15 @@ const Index = () => {
           )}
         </div>
 
-        {/* Quick action banner for logged in users */}
+        {/* Quick action banner */}
         {user && (
           <div className="px-3 py-2">
             <button
               onClick={() => navigate('/swipe')}
-              className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 border border-primary/20 hover:border-primary/40 transition-all"
+              className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-primary/10 via-secondary/10 to-primary/5 border border-primary/20 hover:border-primary/40 transition-all"
             >
               <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="h-5 w-5 text-primary" />
+                <ArrowRightLeft className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1 text-left">
                 <p className="text-sm font-semibold">Mulai Swipe & Barter</p>
@@ -417,7 +401,6 @@ const Index = () => {
             </div>
           ) : (
             <>
-              {/* Items Grid */}
               <div className="grid grid-cols-2 gap-2">
                 {paginatedItems.map((item) => (
                   <button 
@@ -425,7 +408,6 @@ const Index = () => {
                     className="text-left overflow-hidden rounded-xl border border-border/50 bg-card hover:shadow-md transition-all duration-200 active:scale-[0.98]"
                     onClick={() => handleItemClick(item)}
                   >
-                    {/* Image */}
                     <div className="relative aspect-square overflow-hidden bg-muted">
                       <img
                         src={item.photos[0]}
@@ -433,7 +415,6 @@ const Index = () => {
                         className="w-full h-full object-cover"
                         loading="lazy"
                       />
-                      {/* Condition badge on image */}
                       <div className="absolute top-1.5 left-1.5">
                         <span className="px-1.5 py-0.5 rounded-md bg-background/80 backdrop-blur-sm text-[9px] font-medium">
                           {CONDITION_LABELS[item.condition] || item.condition}
@@ -441,7 +422,6 @@ const Index = () => {
                       </div>
                     </div>
 
-                    {/* Info */}
                     <div className="p-2 space-y-1">
                       <h4 className="font-medium text-xs leading-tight line-clamp-2 min-h-[2rem]">
                         {item.name}
@@ -456,7 +436,6 @@ const Index = () => {
                         <span className="truncate">{item.city || item.location?.split(' — ')[0]}</span>
                       </div>
 
-                      {/* Owner row */}
                       <div className="flex items-center gap-1 pt-0.5">
                         <div className="w-4 h-4 rounded-full overflow-hidden flex-shrink-0">
                           {item.profiles?.profile_photo_url ? (
@@ -480,7 +459,6 @@ const Index = () => {
                 ))}
               </div>
 
-              {/* Pagination */}
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
